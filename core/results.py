@@ -5,7 +5,8 @@ Results management and JSON output for TN-Bench.
 import json
 import os
 import time
-from utils import print_success, print_error
+from utils import print_success, print_error, print_info
+from core.analysis import BenchmarkAnalyzer
 
 
 def save_results_to_json(results, output_path, start_time, end_time):
@@ -77,6 +78,19 @@ def save_results_to_json(results, output_path, start_time, end_time):
                     }
                     pool_entry["benchmark"].append(bench_entry)
             
+            # Add iostat telemetry if available
+            if "iostat_telemetry" in pool and pool["iostat_telemetry"]:
+                iostat = pool["iostat_telemetry"]
+                pool_entry["iostat_telemetry"] = {
+                    "pool_name": iostat.get("pool_name"),
+                    "started_at": iostat.get("started_at"),
+                    "interval_seconds": iostat.get("interval_seconds"),
+                    "warmup_iterations": iostat.get("warmup_iterations"),
+                    "cooldown_iterations": iostat.get("cooldown_iterations"),
+                    "total_samples": iostat.get("total_samples"),
+                    "phases": iostat.get("phases", {})
+                }
+            
             # Add DWPD info if available
             if "dwpd" in pool:
                 pool_entry["dwpd"] = round(pool["dwpd"], 2)
@@ -110,6 +124,17 @@ def save_results_to_json(results, output_path, start_time, end_time):
                 }
             
             transformed_results["disks"].append(disk_entry)
+        
+        # Add analysis section
+        try:
+            analyzer = BenchmarkAnalyzer(transformed_results)
+            analysis = analyzer.analyze()
+            transformed_results["analysis"] = analysis
+            print_info(f"Analysis complete - Overall Grade: {analysis['overall_grade']}")
+            if analysis['issues']:
+                print_info(f"Issues detected: {len(analysis['issues'])}")
+        except Exception as e:
+            print_error(f"Analysis failed (non-critical): {str(e)}")
         
         # Write transformed results
         with open(output_path, 'w') as f:
