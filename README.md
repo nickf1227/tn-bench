@@ -34,6 +34,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed documentation on the modular
 ## Features
 
 - **Modular Architecture**: Clean separation between UI, core logic, and benchmarks
+- **Enhanced Disk Benchmarking**: Multiple test modes (serial, parallel, seek-stress) and configurable block sizes
 - Collects system information using TrueNAS API.
 - Benchmarks system performance using `dd` command.
 - Provides detailed information about system, pools, and disks.
@@ -77,6 +78,33 @@ Example of `arcstat -f time,hit%,dh%,ph%,mh% 10` running while the benchmark is 
 
 
 - **Disk Benchmark**: The script performs sequential read benchmarks on individual disks using `dd`. The read size is calculated as `min(system RAM, disk size)` to work around ARC caching. Data is read in 4K chunks to `/dev/null`, making this a 4K sequential read test. 4K was chosen because `ashift=12` for all recent ZFS pools created in TrueNAS. The number of iterations is configurable (default 2). Run-to-run variance is expected, particularly on SSDs, as data may end up in internal caches.
+
+### Enhanced Disk Benchmark (v2.0)
+
+TN-Bench v2.0 introduces an enhanced disk benchmark with multiple test modes and configurable block sizes:
+
+**Test Modes:**
+- **SERIAL** (default): Test disks one at a time
+  - Best for baseline performance measurements
+  - Minimal system impact
+  - Recommended for production systems
+  
+- **PARALLEL**: Test all disks simultaneously
+  - Stress tests storage controllers and backplanes
+  - Higher resource usage than serial mode
+  - Useful for identifying controller bottlenecks
+  
+- **SEEK_STRESS**: Multiple threads per disk
+  - Heavy stress on disk seek mechanisms
+  - Can saturate CPU cores
+  - May cause system instability on busy systems
+  - Not recommended for production use
+
+**Block Size Options:**
+- 4K (small random I/O)
+- 32K (medium I/O)  
+- 128K (large sequential)
+- 1M (very large sequential)
   
 - **Results**: The script displays the results for each run and the average speed. This should give you an idea of the impacts of various thread-counts (as a synthetic representation of client-counts) and the ZFS ARC caching mechanism. 
 
@@ -90,11 +118,35 @@ Example of `arcstat -f time,hit%,dh%,ph%,mh% 10` running while the benchmark is 
 - Results reflect mixed cache hit/miss scenarios, not neccesarily indicative of a real world workload.
 
 ### Resource Requirements
-| Resource Type          | Requirement                                  |
-|------------------------|---------------------------------------------|
-| Pool Test Space        | 20 GiB per thread per iteration             |
-| Thread Configurations  | 4 (1, cores÷4, cores÷2, cores)              |
-| Default Iterations     | 2 per configuration                         |
+| Resource Type          | Requirement                                  | Notes                                      |
+|------------------------|---------------------------------------------|--------------------------------------------|
+| Pool Test Space        | 20 GiB per thread per iteration             | Per pool tested                            |
+| Thread Configurations  | 4 (1, cores÷4, cores÷2, cores)              | For ZFS pool benchmarks                    |
+| Default Iterations     | 2 per configuration                         | Configurable 1-100                         |
+| Disk Serial Mode       | Low impact                                  | Default, safe for production               |
+| Disk Parallel Mode     | Moderate controller load                    | All disks simultaneously                   |
+| Disk Seek-Stress Mode  | **High CPU usage** ⚠️                       | Multiple threads per disk, may saturate CPU |
+
+### ⚠️ Resource Allocation Warnings
+
+**SEEK_STRESS Mode:**
+- Uses multiple concurrent threads per disk (4 threads default)
+- Can saturate all CPU cores
+- May cause system instability on heavily loaded systems
+- **Not recommended for production systems**
+- Only use on dedicated test systems with no other workloads
+
+**PARALLEL Mode:**
+- Tests all disks simultaneously
+- Heavy load on storage controllers and backplanes
+- May impact other I/O operations
+- Use with caution on production systems
+
+**SERIAL Mode (Recommended):**
+- Tests one disk at a time
+- Minimal system impact
+- Safe for production use
+- Best for baseline performance measurements
 
 ### Execution Time
 - **Small all-flash systems**: ~10-30 minutes

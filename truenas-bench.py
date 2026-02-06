@@ -124,14 +124,25 @@ def ask_disk_test_mode():
     print_info("SERIAL is recommended for baseline measurements.")
     print_info("PARALLEL tests controller/chassis backplane throughput.")
     print_info("SEEK_STRESS tests disk seek performance under heavy load.")
+    print()
+    print_warning("⚠️  RESOURCE WARNING:")
+    print_warning("PARALLEL mode will heavily load your storage controllers.")
+    print_warning("SEEK_STRESS uses multiple threads per disk and may cause:")
+    print_warning("  - High CPU usage (can saturate all cores)")
+    print_warning("  - System instability on heavily loaded systems")
+    print_warning("  - Significantly longer test durations")
+    print_info("For production systems, use SERIAL mode only.")
     
     while True:
         response = input(color_text("\nEnter test mode (1/2/3) [1]: ", "BOLD")).strip()
         if not response or response == "1":
             return "serial"
         elif response == "2":
+            print_warning("⚠️  PARALLEL mode selected - expect heavy controller load!")
             return "parallel"
         elif response == "3":
+            print_error("⚠️  SEEK_STRESS mode selected - high CPU usage expected!")
+            print_warning("Ensure system is not running other workloads.")
             return "seek_stress"
         else:
             print_error("Invalid choice. Please enter 1, 2, or 3")
