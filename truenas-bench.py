@@ -112,14 +112,17 @@ def ask_iteration_count(benchmark_type, default=2):
             print_error("Invalid input. Please enter a number")
 
 
-def ask_disk_test_mode():
-    """Ask user for disk test mode."""
+def ask_disk_test_modes():
+    """Ask user for disk test mode(s) - supports multi-select."""
     print_header("Disk Test Mode Selection")
-    print_info("Select the disk benchmark test mode:")
+    print_info("Select the disk benchmark test mode(s):")
     print()
     print_bullet("1. SERIAL - Test disks one at a time (baseline performance)")
     print_bullet("2. PARALLEL - Test all disks simultaneously (controller stress)")
     print_bullet("3. SEEK_STRESS - Multiple threads per disk (seek mechanism stress)")
+    print()
+    print_info("You can select multiple modes by entering comma-separated numbers.")
+    print_info("Examples: '1' (serial only), '1,2' (serial then parallel), 'all' (all modes)")
     print()
     print_info("SERIAL is recommended for baseline measurements.")
     print_info("PARALLEL tests controller/chassis backplane throughput.")
@@ -133,19 +136,45 @@ def ask_disk_test_mode():
     print_warning("  - Significantly longer test durations")
     print_info("For production systems, use SERIAL mode only.")
     
+    mode_map = {
+        "1": "serial",
+        "2": "parallel", 
+        "3": "seek_stress"
+    }
+    
     while True:
-        response = input(color_text("\nEnter test mode (1/2/3) [1]: ", "BOLD")).strip()
+        response = input(color_text("\nEnter test mode(s) (1/2/3, comma-separated, or 'all') [1]: ", "BOLD")).strip().lower()
+        
         if not response or response == "1":
-            return "serial"
-        elif response == "2":
-            print_warning("⚠️  PARALLEL mode selected - expect heavy controller load!")
-            return "parallel"
-        elif response == "3":
-            print_error("⚠️  SEEK_STRESS mode selected - high CPU usage expected!")
-            print_warning("Ensure system is not running other workloads.")
-            return "seek_stress"
-        else:
-            print_error("Invalid choice. Please enter 1, 2, or 3")
+            return ["serial"]
+        elif response == "all":
+            print_warning("⚠️  All modes selected - this will take a very long time!")
+            return ["serial", "parallel", "seek_stress"]
+        
+        # Parse comma-separated selections
+        selections = [s.strip() for s in response.split(",")]
+        modes = []
+        valid = True
+        
+        for selection in selections:
+            if selection in mode_map:
+                modes.append(mode_map[selection])
+            else:
+                print_error(f"Invalid selection: {selection}")
+                valid = False
+                break
+        
+        if valid and modes:
+            # Show warnings for intensive modes
+            if "parallel" in modes:
+                print_warning("⚠️  PARALLEL mode included - expect heavy controller load!")
+            if "seek_stress" in modes:
+                print_error("⚠️  SEEK_STRESS mode included - high CPU usage expected!")
+                print_warning("Ensure system is not running other workloads.")
+            
+            return modes
+        elif not valid:
+            print_error("Invalid choice. Please enter 1, 2, 3, comma-separated values, or 'all'")
 
 
 def ask_disk_block_size():
@@ -168,62 +197,6 @@ def ask_disk_block_size():
             return response
         else:
             print_error("Invalid choice. Please enter 1, 2, 3, or 4")
-
-
-def ask_disk_test_mode():
-    """Ask user for disk benchmark test mode."""
-    print_header("Disk Benchmark Test Mode")
-    print_info("Select the test mode for individual disk benchmarks:")
-    print_bullet("1. serial    - Test disks one at a time (baseline performance)")
-    print_bullet("2. parallel  - Test all disks simultaneously (controller stress)")
-    print_bullet("3. seek_stress - Multiple threads per disk (seek mechanism stress)")
-    
-    while True:
-        response = input(color_text("\nSelect test mode [1]: ", "BOLD")).strip()
-        if not response or response == "1":
-            return "serial"
-        elif response == "2":
-            return "parallel"
-        elif response == "3":
-            return "seek_stress"
-        else:
-            print_error("Invalid selection. Please enter 1, 2, or 3")
-
-
-def ask_block_size():
-    """Ask user for block size."""
-    print_header("Disk Benchmark Block Size")
-    print_info("Select the block size for disk benchmarks:")
-    for key, info in BLOCK_SIZES.items():
-        print_bullet(f"{key}. {info['description']}")
-    
-    while True:
-        response = input(color_text("\nSelect block size [4]: ", "BOLD")).strip()
-        if not response:
-            return "4"  # Default to 1M
-        if response in BLOCK_SIZES:
-            return response
-        print_error("Invalid selection. Please enter 1, 2, 3, or 4")
-
-
-def ask_seek_threads():
-    """Ask user for number of threads in seek_stress mode."""
-    print_header("Seek-Stress Thread Count")
-    print_info("How many concurrent threads per disk for seek-stress mode?")
-    print_bullet("• More threads = higher stress on disk seek mechanisms")
-    print_bullet("• Recommended: 4-8 threads per disk")
-    
-    while True:
-        response = input(color_text("\nEnter thread count [4]: ", "BOLD")).strip()
-        if not response:
-            return 4
-        try:
-            count = int(response)
-            if 1 <= count <= 32:
-                return count
-            print_error("Please enter a number between 1 and 32")
-        except ValueError:
-            print_error("Invalid input. Please enter a number")
 
 
 def calculate_dwpd(total_writes_gib, pool_capacity_gib, test_duration_seconds):
@@ -289,17 +262,17 @@ def main():
     benchmark_results["benchmark_config"]["disk_benchmark_run"] = run_disk_bench
     benchmark_results["benchmark_config"]["disk_iterations"] = disk_iterations
     
-    disk_test_mode = "serial"
+    disk_test_modes = ["serial"]
     block_size = "4"
     seek_threads = 4
     
     if run_disk_bench:
-        disk_test_mode = ask_disk_test_mode()
-        block_size = ask_block_size()
-        if disk_test_mode == "seek_stress":
+        disk_test_modes = ask_disk_test_modes()
+        block_size = ask_disk_block_size()
+        if "seek_stress" in disk_test_modes:
             seek_threads = ask_seek_threads()
         
-        benchmark_results["benchmark_config"]["disk_test_mode"] = disk_test_mode
+        benchmark_results["benchmark_config"]["disk_test_modes"] = disk_test_modes
         benchmark_results["benchmark_config"]["disk_block_size"] = BLOCK_SIZES[block_size]["size"]
         benchmark_results["benchmark_config"]["disk_seek_threads"] = seek_threads
 
@@ -390,21 +363,27 @@ def main():
 
     # Run disk benchmark if requested
     if run_disk_bench:
-        print_header("Disk Benchmark Configuration")
-        print_info(f"Test mode: {disk_test_mode}")
-        print_info(f"Block size: {BLOCK_SIZES[block_size]['description']}")
-        if disk_test_mode == "seek_stress":
-            print_info(f"Threads per disk: {seek_threads}")
+        all_disk_results = []
         
-        disk_benchmark = EnhancedDiskBenchmark(
-            disk_info, system_info, 
-            test_mode=disk_test_mode,
-            block_size=block_size,
-            iterations=disk_iterations,
-            seek_threads=seek_threads
-        )
-        disk_bench_results = disk_benchmark.run()
-        benchmark_results["disk_benchmark"] = disk_bench_results
+        # Run each selected test mode
+        for mode in disk_test_modes:
+            print_header("Disk Benchmark Configuration")
+            print_info(f"Test mode: {mode}")
+            print_info(f"Block size: {BLOCK_SIZES[block_size]['description']}")
+            if mode == "seek_stress":
+                print_info(f"Threads per disk: {seek_threads}")
+            
+            disk_benchmark = EnhancedDiskBenchmark(
+                disk_info, system_info, 
+                test_mode=mode,
+                block_size=block_size,
+                iterations=disk_iterations,
+                seek_threads=seek_threads
+            )
+            mode_results = disk_benchmark.run()
+            all_disk_results.extend(mode_results)
+        
+        benchmark_results["disk_benchmark"] = all_disk_results
 
     end_time = time.time()
     total_time_taken = end_time - start_time
