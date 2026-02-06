@@ -6,6 +6,15 @@ import subprocess
 import json
 from utils import print_subheader, print_info, color_text
 
+# Import iostat collector for easy access
+from core.iostat_collector import (
+    ZPoolIostatCollector,
+    IostatSample,
+    IostatTelemetry,
+    IostatCollectorWithContext,
+    calculate_iostat_summary
+)
+
 
 def get_system_info():
     """Fetch system information from TrueNAS API."""
