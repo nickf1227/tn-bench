@@ -52,8 +52,17 @@ class ZpoolIostatTelemetry:
     cooldown_iterations: int = 0
     samples: List[ZpoolIostatSample] = field(default_factory=list)
     
-    def to_dict(self) -> dict:
-        """Convert telemetry to dictionary for JSON serialization."""
+    def to_dict(self, sample_interval: int = 1) -> dict:
+        """
+        Convert telemetry to dictionary for JSON serialization.
+        
+        Args:
+            sample_interval: Keep every Nth sample (default: 1 = all samples).
+                           Use 5 to keep every 5th sample, 10 for every 10th, etc.
+        """
+        # Slice samples based on interval (keep every Nth)
+        downsampled = self.samples[::sample_interval] if sample_interval > 1 else self.samples
+        
         return {
             "pool_name": self.pool_name,
             "start_time": self.start_time,
@@ -63,8 +72,10 @@ class ZpoolIostatTelemetry:
             "duration_seconds": round(self.end_time - self.start_time, 2) if self.end_time else None,
             "warmup_iterations": self.warmup_iterations,
             "cooldown_iterations": self.cooldown_iterations,
-            "total_samples": len(self.samples),
-            "samples": [asdict(s) for s in self.samples]
+            "total_samples_collected": len(self.samples),
+            "sample_interval": sample_interval,
+            "samples_in_output": len(downsampled),
+            "samples": [asdict(s) for s in downsampled]
         }
 
 

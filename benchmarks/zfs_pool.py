@@ -238,7 +238,7 @@ class ZFSPoolBenchmark(BenchmarkBase):
         return {
             "benchmark_results": results,
             "total_bytes_written": total_bytes_written,
-            "zpool_iostat_telemetry": self.zpool_iostat_telemetry.to_dict() if self.zpool_iostat_telemetry else None
+            "zpool_iostat_telemetry": self.zpool_iostat_telemetry.to_dict(sample_interval=5) if self.zpool_iostat_telemetry else None
         }
     
     def _run_benchmark_without_zpool_iostat(self):
