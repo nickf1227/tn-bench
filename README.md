@@ -29,17 +29,22 @@ TN-Bench v2.0 has been completely refactored into a modular architecture. While 
 
 ```
 tn-bench/
-├── truenas-bench.py      # Main coordinator (thin UI layer)
-├── core/                 # Core functionality
-│   ├── system.py         # System/pool/disk API calls
-│   ├── dataset.py        # Dataset lifecycle management
-│   └── results.py        # JSON output handling
-├── benchmarks/           # Benchmark implementations
-│   ├── base.py           # Abstract base class for all benchmarks
-│   ├── zfs_pool.py       # ZFS pool write/read benchmark
-│   └── disk_raw.py       # Individual disk read benchmark
-└── utils/                # Common utilities
-    └── helpers.py        # Colors, formatting, print functions
+├── truenas-bench.py          # Main coordinator (thin UI layer)
+├── core/                     # Core functionality
+│   ├── __init__.py          # System/pool/disk API calls
+│   ├── dataset.py           # Dataset lifecycle management
+│   ├── results.py           # JSON output handling
+│   ├── analytics.py         # Scaling analysis engine (v2.1)
+│   ├── report_generator.py  # Markdown report generation (v2.1)
+│   └── zpool_iostat_collector.py  # ZFS pool iostat telemetry (v2.1)
+├── benchmarks/              # Benchmark implementations
+│   ├── __init__.py          # Exports benchmark classes
+│   ├── base.py              # Abstract base class
+│   ├── zfs_pool.py          # ZFS pool write/read benchmark
+│   ├── disk_raw.py          # Individual disk read benchmark
+│   └── disk_enhanced.py     # Enhanced disk benchmark (v2.0)
+└── utils/                   # Common utilities
+    └── __init__.py          # Colors, formatting, print functions
 ```
 
 **Benefits of this design:**
@@ -70,7 +75,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed documentation on the modular
 ### Please note, this script needs to be run as `root`. 
 
    ```
-   git clone -b tn-bench-2.0 https://github.com/nickf1227/tn-bench.git && cd tn-bench && python3 truenas-bench.py
+   git clone -b tn-bench-2.1 https://github.com/nickf1227/tn-bench.git && cd tn-bench && python3 truenas-bench.py
    ```
 
 

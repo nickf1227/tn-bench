@@ -33,7 +33,7 @@ from benchmarks import ZFSPoolBenchmark, DiskBenchmark, EnhancedDiskBenchmark, B
 
 def get_user_confirmation():
     """Display welcome message and get user confirmation to proceed."""
-    print_header("TN-Bench v2.0 (Modular)")
+    print_header("TN-Bench v2.1 (Modular)")
     print(color_text("TN-Bench is an OpenSource Software Script that uses standard tools to", "BOLD"))
     print(color_text("Benchmark your System and collect various statistical information via", "BOLD"))
     print(color_text("the TrueNAS API.", "BOLD"))

@@ -1,24 +1,30 @@
-# TN-Bench 2.0 - Modular Architecture
+# TN-Bench 2.1 - Modular Architecture
 
 ## Overview
-Complete refactor of TN-Bench into a modular architecture while maintaining 100% backward compatibility with the existing user interface.
+TN-Bench uses a modular architecture with clean separation between UI, core functionality, and benchmark implementations. Version 2.1 adds analytics and zpool iostat telemetry collection.
 
 ## Directory Structure
 
 ```
 tn-bench/
-├── truenas-bench.py          # Main UI/coordinator (refactored)
-├── core/                     # Core functionality modules
-│   ├── __init__.py          # System info, pool info, disk info
-│   ├── dataset.py           # Dataset create/delete/validate
-│   └── results.py           # JSON output formatting
-├── benchmarks/              # Benchmark implementations
-│   ├── __init__.py          # Exports benchmark classes
-│   ├── base.py              # Abstract base class
-│   ├── zfs_pool.py          # ZFS pool write/read benchmark
-│   └── disk_raw.py          # Individual disk read benchmark
-└── utils/                   # Common utilities
-    └── __init__.py          # Color, formatting, print helpers
+├── truenas-bench.py              # Main UI/coordinator
+├── core/                         # Core functionality modules
+│   ├── __init__.py              # System/pool/disk info, zpool iostat exports
+│   ├── dataset.py               # Dataset create/delete/validate
+│   ├── results.py               # JSON output formatting
+│   ├── analysis.py              # Grading-based analysis (legacy)
+│   ├── analytics.py             # Neutral scaling analysis (v2.1)
+│   ├── report_generator.py      # Markdown report generation (v2.1)
+│   └── zpool_iostat_collector.py  # ZFS pool iostat telemetry (v2.1)
+├── benchmarks/                  # Benchmark implementations
+│   ├── __init__.py              # Exports benchmark classes
+│   ├── base.py                  # Abstract BenchmarkBase class
+│   ├── zfs_pool.py              # ZFS pool write/read benchmark
+│   ├── disk_raw.py              # Individual disk read benchmark
+│   └── disk_enhanced.py         # Enhanced disk benchmark with modes (v2.1)
+├── utils/                       # Common utilities
+│   └── __init__.py              # Color, formatting, print helpers
+└── test_zpool_iostat_collector.py  # Tests for zpool iostat collector
 ```
 
 ## Module Responsibilities
@@ -29,70 +35,103 @@ tn-bench/
 - `color_text()` for conditional terminal coloring
 
 ### `core/` - Core Functionality
-- **`__init__.py`**: System/pool/disk information collection via TrueNAS API
+- **`__init__.py`**: System/pool/disk information collection via TrueNAS API; exports zpool iostat collector classes
 - **`dataset.py`**: Dataset lifecycle management (create, delete, space validation)
-- **`results.py`**: JSON output transformation and saving
+- **`results.py`**: JSON output transformation, saving, and embedded grading analysis
+- **`analysis.py`**: Grading-based analysis (A-F grades, issues, recommendations) - runs during save
+- **`analytics.py`**: Neutral scaling analysis with dataclasses - runs post-benchmark for reports
+- **`report_generator.py`**: Markdown report generation from analytics data
+- **`zpool_iostat_collector.py`**: Background collection of `zpool iostat` telemetry during benchmarks
 
 ### `benchmarks/` - Benchmark Implementations
-- **`base.py`**: Abstract `BenchmarkBase` class defining the interface:
-  - `name`, `description` class attributes
-  - `validate()` - Check prerequisites
-  - `run(config)` - Execute benchmark
-  - `space_required_gib` - Space calculation property
-- **`zfs_pool.py`**: `ZFSPoolBenchmark` class
-  - Sequential write/read with varying thread counts
-  - Thread counts: 1, cores/4, cores/2, cores
-  - 20 GiB per thread
-- **`disk_raw.py`**: `DiskBenchmark` class
-  - 4K sequential read on individual disks
-  - Read size = min(system RAM, disk size)
+- **`base.py`**: Abstract `BenchmarkBase` class defining the interface
+- **`zfs_pool.py`**: `ZFSPoolBenchmark` - Sequential write/read with zpool iostat integration
+- **`disk_raw.py`**: `DiskBenchmark` - Individual disk read testing
+- **`disk_enhanced.py`**: `EnhancedDiskBenchmark` - Multiple test modes (serial/parallel/seek_stress)
 
 ### `truenas-bench.py` - Main Coordinator
-- User interface and flow control (unchanged from v1.x)
+- User interface and flow control
 - Delegates to modules for all operations
-- Maintains identical command-line interface
-- Same interactive prompts and output format
+- Runs analytics and generates reports post-benchmark
 
-## Key Benefits
+## Key Components
 
-1. **Maintainability**: Each component is isolated and testable
-2. **Extensibility**: New benchmarks can be added by:
-   - Creating a new file in `benchmarks/`
-   - Inheriting from `BenchmarkBase`
-   - Importing and using in main script
-3. **Clarity**: Separation of concerns makes code easier to understand
-4. **Testing**: Individual modules can be unit tested
-5. **Reusability**: Core utilities can be used by future benchmarks
+### ZPool Iostat Collector (v2.1)
 
-## Backward Compatibility
+Background telemetry collection during pool benchmarks:
 
-✅ **100% Compatible**: No changes to:
-- Command-line arguments (`--output`)
-- Interactive prompts and flow
-- Console output formatting
-- JSON output schema
-- Benchmark behavior and calculations
+```python
+from core.zpool_iostat_collector import ZpoolIostatCollector
+
+collector = ZpoolIostatCollector(pool_name="tank", interval=1)
+collector.start(warmup_iterations=3)
+# ... benchmark runs ...
+telemetry = collector.stop(cooldown_iterations=3)
+```
+
+Features:
+- Non-blocking background collection via subprocess
+- Warmup and cooldown periods
+- Extended latency statistics (with `-l` flag)
+- Automatic process cleanup
+
+### Analytics Engine (v2.1)
+
+Neutral data presentation using dataclasses:
+
+```python
+from core.analytics import ResultAnalyzer
+
+analyzer = ResultAnalyzer(results_dict)
+analysis = analyzer.analyze()  # Returns SystemAnalysis
+```
+
+Outputs:
+- Pool scaling analysis (write/read progression)
+- Disk comparison across pools
+- Neutral observations (no grades/opinions)
+
+### Report Generator (v2.1)
+
+Markdown report from analytics:
+
+```python
+from core.report_generator import generate_markdown_report
+
+report = generate_markdown_report(analysis_dict, output_path)
+```
+
+## Analysis Pipeline
+
+Two analysis systems coexist:
+
+1. **Grading Analysis** (`analysis.py`) - Legacy
+   - Runs during `save_results_to_json()`
+   - Embeds A-F grades in JSON output
+   - Generates issues and recommendations
+   - Used for quick pass/fail assessment
+
+2. **Scaling Analytics** (`analytics.py`) - v2.1
+   - Runs after benchmark completion
+   - Neutral data presentation (no grades)
+   - Generates separate `_analytics.json` and `_report.md`
+   - Better for understanding performance characteristics
+
+**Future Direction:** The grading system may be deprecated in favor of neutral analytics.
 
 ## Adding New Benchmarks
-
-To add a new benchmark:
 
 1. Create a new file in `benchmarks/` (e.g., `my_benchmark.py`)
 2. Inherit from `BenchmarkBase`:
 
 ```python
 from benchmarks.base import BenchmarkBase
-from utils import print_info, print_success
 
 class MyBenchmark(BenchmarkBase):
     name = "my_benchmark"
-    description = "Description of my benchmark"
-    
-    def __init__(self, config):
-        self.config = config
+    description = "Description"
     
     def validate(self) -> bool:
-        # Check prerequisites
         return True
     
     @property
@@ -100,27 +139,14 @@ class MyBenchmark(BenchmarkBase):
         return 0
     
     def run(self, config: dict = None) -> dict:
-        # Run benchmark
-        print_info("Running my benchmark...")
         return {"results": "data"}
 ```
 
-3. Export in `benchmarks/__init__.py`:
-```python
-from benchmarks.my_benchmark import MyBenchmark
-__all__ = ['BenchmarkBase', 'ZFSPoolBenchmark', 'DiskBenchmark', 'MyBenchmark']
-```
-
-4. Use in `truenas-bench.py`:
-```python
-from benchmarks import MyBenchmark
-
-# In main():
-my_bench = MyBenchmark(config)
-results = my_bench.run()
-```
+3. Export in `benchmarks/__init__.py`
+4. Use in `truenas-bench.py`
 
 ## Version History
 
 - **v1.11**: Monolithic single-file script
-- **v2.0**: Modular architecture (this version)
+- **v2.0**: Modular architecture, space optimization
+- **v2.1**: Analytics engine, zpool iostat collection, enhanced disk benchmark
