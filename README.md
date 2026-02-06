@@ -1,8 +1,27 @@
-# tn-bench v2.0
+# tn-bench v2.1
 
 ##  tn-bench is an OpenSource software script that benchmarks your system and collects various statistical information via the TrueNAS API. It creates a dataset in each of your pools during testing, consuming 20 GiB of space for each thread in your system.
 
-## 🆕 What's New in v2.0
+## 🆕 What's New in v2.1
+
+### Automatic Analytics
+- Post-benchmark analysis automatically identifies scaling patterns
+- Generates `_analytics.json` with structured performance data
+- Generates `_report.md` with human-readable markdown tables
+- Neutral data presentation — reports observations without judgment
+
+### Delta-Based Scaling Analysis
+- Tracks performance changes between thread count steps
+- Identifies optimal thread count for each pool
+- Shows thread efficiency (MB/s per thread at peak)
+- Highlights notable transitions (gains, losses, plateaus)
+
+### Per-Disk Pool Comparison
+- Compares individual disk performance to pool average
+- Shows variance percentage within each pool
+- Identifies outliers using % of pool max metric
+
+## Previous: What's New in v2.0
 
 ### Modular Architecture
 
@@ -166,11 +185,76 @@ Delete testing dataset fire/tn-bench? (yes/no): yes
 ![a1455ff8f352193cdadd373471d714d42b170ebb](https://github.com/user-attachments/assets/0e938607-b9c4-424b-a780-ad079901f5a5)
 
 
-## Out put file
+## Output Files
 
 `python3 truenas-bench.py [--output /root/my_results.json]`
 
-A shareable JSON file can be generated, we have an initial version 1.0 schema, with the intention of eventually adding new fields without breaking the existing structure. 
+TN-Bench generates three files for each benchmark run:
+
+| File | Suffix | Description |
+|------|--------|-------------|
+| Results | `.json` | Raw benchmark data with system info, pool benchmarks, and disk benchmarks |
+| Analytics | `_analytics.json` | Structured analysis of scaling patterns and per-disk performance |
+| Report | `_report.md` | Human-readable markdown report with tables and observations |
+
+### Example
+```bash
+python3 truenas-bench.py --output results.json
+```
+
+Generates:
+- `results.json` — Raw benchmark data
+- `results_analytics.json` — Scaling analysis and disk comparison
+- `results_report.md` — Markdown report for sharing
+
+## Analytics (v2.1+)
+
+TN-Bench automatically analyzes benchmark results to identify scaling patterns and performance characteristics:
+
+### What's Analyzed
+- **Thread scaling**: How performance changes as thread count increases
+- **Optimization points**: Thread count where peak performance occurs
+- **Transition deltas**: Speed changes between thread configurations
+- **Per-disk variance**: Individual drive performance relative to pool average
+
+### Key Metrics
+| Metric | Description |
+|--------|-------------|
+| Peak Speed | Maximum throughput achieved |
+| Optimal Threads | Thread count at peak performance |
+| Thread Efficiency | MB/s per thread at peak |
+| % of Pool Avg | Disk speed relative to pool mean |
+
+### Sample Analytics Output
+```json
+{
+  "pool_analyses": [{
+    "name": "tank",
+    "write_scaling": {
+      "peak_speed_mbps": 4465.7,
+      "optimal_threads": 16,
+      "thread_efficiency": 279.1,
+      "progression": [...],
+      "deltas": [...]
+    },
+    "read_scaling": { ... },
+    "observations": [
+      "Speed decreases from 16 to 32 threads"
+    ]
+  }],
+  "disk_comparison": {
+    "tank": {
+      "pool_average_mbps": 614.5,
+      "variance_pct": 0.3,
+      "disks": [...]
+    }
+  }
+}
+```
+
+The analytics engine uses neutral data presentation — it reports what it observes without making performance judgments. You draw the conclusions.
+
+## JSON Schema 
 
 ```
 {
