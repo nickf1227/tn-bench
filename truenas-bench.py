@@ -16,7 +16,8 @@ import os
 import time
 
 from utils import (
-    print_header, print_info, print_success, color_text
+    print_header, print_info, print_success, print_warning, print_error, 
+    print_section, print_bullet, color_text
 )
 from core import (
     get_system_info, print_system_info_table,
@@ -481,5 +482,4 @@ def main():
 
 
 if __name__ == "__main__":
-    from utils import print_warning, print_error, print_section, print_bullet
     main()
