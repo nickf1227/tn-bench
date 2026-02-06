@@ -1,0 +1,14 @@
+# Local scripts - should not be committed
+scripts/nightly_regression.sh
+
+# macOS system files
+.DS_Store
+
+# Python cache
+__pycache__/
+*.pyc
+*.pyo
+
+# Test results (generated)
+tn_bench_results.json
+*.log
