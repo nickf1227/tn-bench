@@ -152,10 +152,18 @@ class ResultAnalyzer:
                 max_threads = thread_counts[-1]
                 max_speed = max(speeds)
                 max_idx = speeds.index(max_speed)
-                
-                # Scaling efficiency = actual speed / theoretical max speed
-                theoretical_max = single_thread_speed * max_threads
-                efficiency = (max_speed / theoretical_max * 100) if theoretical_max > 0 else 0
+
+                # For reads: Use peak efficiency (cache effects skew single-thread)
+                # For writes: Use max thread efficiency (true scaling test)
+                if op_name == "read":
+                    # Compare peak to theoretical at peak thread count
+                    peak_threads = thread_counts[max_idx]
+                    theoretical_at_peak = single_thread_speed * peak_threads
+                    efficiency = (max_speed / theoretical_at_peak * 100) if theoretical_at_peak > 0 else 0
+                else:
+                    # Write scaling: actual max / theoretical max
+                    theoretical_max = single_thread_speed * max_threads
+                    efficiency = (max_speed / theoretical_max * 100) if theoretical_max > 0 else 0
                 scaling_efficiency[op_name] = efficiency
                 
                 # Optimal thread count
@@ -264,26 +272,32 @@ class ResultAnalyzer:
             "consistency_grade": "A" if not outliers else "B" if len(outliers) <= 1 else "C"
         }
     
-    def _calculate_pool_grade(self, scaling_efficiency: Dict[str, float], 
+    def _calculate_pool_grade(self, scaling_efficiency: Dict[str, float],
                                anomalies: List[Finding]) -> str:
-        """Calculate letter grade for a pool."""
-        # Base score from scaling efficiency
+        """Calculate letter grade for a pool.
+
+        Note: ZFS has inherent scaling limitations due to memory copies.
+        On DDR4 platforms, 35-45% efficiency is good (B grade).
+        On DDR5 platforms, expect 50-70% efficiency (A grade potential).
+        """
+        # Adjusted for ZFS real-world performance
+        # ZFS memory copy overhead limits ideal scaling
         scores = []
         for eff in scaling_efficiency.values():
-            if eff >= 50:
-                scores.append(90 + min(eff - 50, 10))  # A range
-            elif eff >= 30:
-                scores.append(80 + (eff - 30))  # B range
-            elif eff >= 15:
-                scores.append(70 + (eff - 15))  # C range
-            elif eff >= 5:
+            if eff >= 60:  # Excellent - likely DDR5 or optimal config
+                scores.append(90 + min(eff - 60, 10))  # A range
+            elif eff >= 35:  # Good - typical for DDR4 + ZFS + NVMe
+                scores.append(80 + (eff - 35))  # B range (35% = 80, 59% = 99)
+            elif eff >= 20:  # Fair - some bottleneck present
+                scores.append(70 + (eff - 20))  # C range
+            elif eff >= 10:  # Poor - significant issue
                 scores.append(60 + eff)  # D range
             else:
-                scores.append(50)  # F
-        
+                scores.append(50)  # F - broken scaling
+
         if not scores:
             return "N/A"
-        
+
         avg_score = sum(scores) / len(scores)
         
         # Penalize for critical warnings
