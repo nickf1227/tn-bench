@@ -328,7 +328,8 @@ def main():
             
             print_section("Space Verification")
             print_info(f"Available space: {available_gib:.2f} GiB")
-            print_info(f"Space required:  {required_gib:.2f} GiB (20 GiB/thread × {cores} threads × {zfs_iterations} iterations)")
+            print_info(f"Space required:  {required_gib:.2f} GiB (20 GiB/thread × {cores} threads)")
+            print_info(f"Test iterations: {zfs_iterations} (space freed between iterations)")
             
             if not has_space:
                 print_warning(f"Insufficient space in dataset {pool_name}/tn-bench")

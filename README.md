@@ -120,7 +120,7 @@ TN-Bench v2.0 introduces an enhanced disk benchmark with multiple test modes and
 ### Resource Requirements
 | Resource Type          | Requirement                                  | Notes                                      |
 |------------------------|---------------------------------------------|--------------------------------------------|
-| Pool Test Space        | 20 GiB per thread per iteration             | Per pool tested                            |
+| Pool Test Space        | 20 GiB per thread                           | Space freed between iterations (v2.0+)     |
 | Thread Configurations  | 4 (1, cores÷4, cores÷2, cores)              | For ZFS pool benchmarks                    |
 | Default Iterations     | 2 per configuration                         | Configurable 1-100                         |
 | Disk Serial Mode       | Low impact                                  | Default, safe for production               |

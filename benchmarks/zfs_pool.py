@@ -1,5 +1,6 @@
 """
 ZFS Pool benchmark - sequential write/read across varying thread counts.
+Space-optimized version: cleans up test files between iterations to reduce space requirements.
 """
 
 import subprocess
@@ -18,81 +19,69 @@ def run_dd_command(command):
     subprocess.run(command, shell=True)
 
 
-def run_write_benchmark(threads, bytes_per_thread, block_size, file_prefix, dataset_path, iterations=2):
+def cleanup_test_files(dataset_path, file_prefix, num_threads):
+    """Clean up test files for a specific thread count."""
+    for i in range(num_threads):
+        file_path = f"{dataset_path}/{file_prefix}{i}.dat"
+        if os.path.exists(file_path):
+            os.remove(file_path)
+
+
+def run_single_iteration(threads, bytes_per_thread, block_size, file_prefix, dataset_path, iteration_num):
     """
-    Run write benchmark with specified thread count.
+    Run a single write/read iteration and cleanup.
     
     Returns:
-        tuple: (speeds list, average speed, total bytes written)
+        tuple: (write_speed, read_speed, bytes_written)
     """
-    print_info(f"Running DD write benchmark with {threads} threads...")
-    speeds = []
-    total_bytes_written = 0
-
-    for run in range(iterations):
-        start_time = time.time()
-
-        threads_list = []
-        for i in range(threads):
-            command = f"dd if=/dev/urandom of={dataset_path}/{file_prefix}{i}.dat bs={block_size} count={bytes_per_thread} status=none"
-            thread = threading.Thread(target=run_dd_command, args=(command,))
-            thread.start()
-            threads_list.append(thread)
-
-        for thread in threads_list:
-            thread.join()
-
-        end_time = time.time()
-        total_time_taken = end_time - start_time
-        
-        # Calculate bytes written in this run
-        block_size_bytes = 1024*1024  # 1M = 1,048,576 bytes
-        bytes_this_run = threads * bytes_per_thread * block_size_bytes
-        total_bytes_written += bytes_this_run
-        
-        write_speed = bytes_this_run / total_time_taken / (1024*1024)  # MB/s
-        speeds.append(write_speed)
-        print_info(f"Run {run + 1} write speed: {color_text(f'{write_speed:.2f} MB/s', 'YELLOW')}")
-        print_info(f"Run {run + 1} wrote: {bytes_this_run/(1024**3):.2f} GiB")
-
-    average_write_speed = sum(speeds) / len(speeds) if speeds else 0
-    print_success(f"Average write speed: {color_text(f'{average_write_speed:.2f} MB/s', 'GREEN')}")
-    return speeds, average_write_speed, total_bytes_written
-
-
-def run_read_benchmark(threads, bytes_per_thread, block_size, file_prefix, dataset_path, iterations=2):
-    """
-    Run read benchmark with specified thread count.
+    # Write phase
+    print_info(f"Iteration {iteration_num}: Writing...")
+    start_time = time.time()
     
-    Returns:
-        tuple: (speeds list, average speed)
-    """
-    print_info(f"Running DD read benchmark with {threads} threads...")
-    speeds = []
-
-    for run in range(iterations):
-        start_time = time.time()
-
-        threads_list = []
-        for i in range(threads):
-            command = f"dd if={dataset_path}/{file_prefix}{i}.dat of=/dev/null bs={block_size} count={bytes_per_thread} status=none"
-            thread = threading.Thread(target=run_dd_command, args=(command,))
-            thread.start()
-            threads_list.append(thread)
-
-        for thread in threads_list:
-            thread.join()
-
-        end_time = time.time()
-        total_time_taken = end_time - start_time
-        total_bytes = threads * bytes_per_thread * 1024 * 1024
-        read_speed = total_bytes / 1024 / 1024 / total_time_taken
-        speeds.append(read_speed)
-        print_info(f"Run {run + 1} read speed: {color_text(f'{read_speed:.2f} MB/s', 'YELLOW')}")
-
-    average_read_speed = sum(speeds) / len(speeds) if speeds else 0
-    print_success(f"Average read speed: {color_text(f'{average_read_speed:.2f} MB/s', 'GREEN')}")
-    return speeds, average_read_speed
+    threads_list = []
+    for i in range(threads):
+        command = f"dd if=/dev/urandom of={dataset_path}/{file_prefix}{i}.dat bs={block_size} count={bytes_per_thread} status=none"
+        thread = threading.Thread(target=run_dd_command, args=(command,))
+        thread.start()
+        threads_list.append(thread)
+    
+    for thread in threads_list:
+        thread.join()
+    
+    end_time = time.time()
+    total_time_taken = end_time - start_time
+    
+    block_size_bytes = 1024 * 1024  # 1M
+    bytes_written = threads * bytes_per_thread * block_size_bytes
+    write_speed = bytes_written / total_time_taken / (1024 * 1024)
+    
+    print_info(f"Iteration {iteration_num} write: {color_text(f'{write_speed:.2f} MB/s', 'YELLOW')}")
+    
+    # Read phase
+    print_info(f"Iteration {iteration_num}: Reading...")
+    start_time = time.time()
+    
+    threads_list = []
+    for i in range(threads):
+        command = f"dd if={dataset_path}/{file_prefix}{i}.dat of=/dev/null bs={block_size} count={bytes_per_thread} status=none"
+        thread = threading.Thread(target=run_dd_command, args=(command,))
+        thread.start()
+        threads_list.append(thread)
+    
+    for thread in threads_list:
+        thread.join()
+    
+    end_time = time.time()
+    total_time_taken = end_time - start_time
+    
+    read_speed = bytes_written / total_time_taken / (1024 * 1024)
+    
+    print_info(f"Iteration {iteration_num} read: {color_text(f'{read_speed:.2f} MB/s', 'YELLOW')}")
+    
+    # Cleanup immediately after read to free space
+    cleanup_test_files(dataset_path, file_prefix, threads)
+    
+    return write_speed, read_speed, bytes_written
 
 
 class ZFSPoolBenchmark(BenchmarkBase):
@@ -116,13 +105,17 @@ class ZFSPoolBenchmark(BenchmarkBase):
     
     @property
     def space_required_gib(self) -> int:
-        """Calculate space required: 20 GiB per thread across 4 configurations."""
+        """
+        Calculate space required: 20 GiB per thread (single iteration).
+        Space is freed between iterations, so we only need space for one iteration.
+        """
         max_threads = self.cores
-        return 20 * max_threads * self.iterations
+        return 20 * max_threads  # Only need space for one iteration at a time
     
     def run(self, config: dict = None) -> dict:
         """
         Run the ZFS pool benchmark across four thread-count configurations.
+        Cleans up test files between iterations to minimize space usage.
         
         Returns:
             dict: Results containing thread counts, speeds, and metadata.
@@ -134,16 +127,27 @@ class ZFSPoolBenchmark(BenchmarkBase):
 
         for threads in thread_counts:
             print_section(f"Testing Pool: {escaped_pool_name} - Threads: {threads}")
-            write_speeds, average_write_speed, bytes_written = run_write_benchmark(
-                threads, self.bytes_per_thread, self.block_size, 
-                self.file_prefix, self.dataset_path, self.iterations
-            )
-            total_bytes_written += bytes_written
             
-            read_speeds, average_read_speed = run_read_benchmark(
-                threads, self.bytes_per_thread, self.block_size,
-                self.file_prefix, self.dataset_path, self.iterations
-            )
+            write_speeds = []
+            read_speeds = []
+            bytes_written_for_config = 0
+            
+            # Run iterations sequentially with cleanup between each
+            for iteration in range(1, self.iterations + 1):
+                print_info(f"--- Iteration {iteration} of {self.iterations} ---")
+                write_speed, read_speed, bytes_written = run_single_iteration(
+                    threads, self.bytes_per_thread, self.block_size,
+                    self.file_prefix, self.dataset_path, iteration
+                )
+                write_speeds.append(write_speed)
+                read_speeds.append(read_speed)
+                bytes_written_for_config += bytes_written
+                total_bytes_written += bytes_written
+                print_info(f"Space freed after iteration {iteration}")
+            
+            average_write_speed = sum(write_speeds) / len(write_speeds) if write_speeds else 0
+            average_read_speed = sum(read_speeds) / len(read_speeds) if read_speeds else 0
+            
             results.append({
                 "threads": threads,
                 "write_speeds": write_speeds,
@@ -151,7 +155,7 @@ class ZFSPoolBenchmark(BenchmarkBase):
                 "read_speeds": read_speeds,
                 "average_read_speed": average_read_speed,
                 "iterations": self.iterations,
-                "bytes_written": bytes_written
+                "bytes_written": bytes_written_for_config
             })
 
         # Print summary
@@ -180,9 +184,11 @@ class ZFSPoolBenchmark(BenchmarkBase):
         }
     
     def cleanup(self):
-        """Remove test files from dataset."""
-        print_info("Cleaning up test files...")
-        escaped_dataset_path = self.dataset_path.replace(" ", "\\ ")
-        for file in os.listdir(escaped_dataset_path):
-            if file.startswith(self.file_prefix) and file.endswith('.dat'):
-                os.remove(os.path.join(escaped_dataset_path, file))
+        """Remove any remaining test files (safety cleanup)."""
+        print_info("Cleaning up any remaining test files...")
+        thread_counts = [1, self.cores // 4, self.cores // 2, self.cores]
+        max_threads = max(thread_counts)
+        for i in range(max_threads):
+            file_path = f"{self.dataset_path}/{self.file_prefix}{i}.dat"
+            if os.path.exists(file_path):
+                os.remove(file_path)
