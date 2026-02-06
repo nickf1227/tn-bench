@@ -12,7 +12,6 @@ tn-bench/
 │   ├── __init__.py              # System/pool/disk info, zpool iostat exports
 │   ├── dataset.py               # Dataset create/delete/validate
 │   ├── results.py               # JSON output formatting
-│   ├── analysis.py              # Grading-based analysis (legacy)
 │   ├── analytics.py             # Neutral scaling analysis (v2.1)
 │   ├── report_generator.py      # Markdown report generation (v2.1)
 │   └── zpool_iostat_collector.py  # ZFS pool iostat telemetry (v2.1)
@@ -37,8 +36,7 @@ tn-bench/
 ### `core/` - Core Functionality
 - **`__init__.py`**: System/pool/disk information collection via TrueNAS API; exports zpool iostat collector classes
 - **`dataset.py`**: Dataset lifecycle management (create, delete, space validation)
-- **`results.py`**: JSON output transformation, saving, and embedded grading analysis
-- **`analysis.py`**: Grading-based analysis (A-F grades, issues, recommendations) - runs during save
+- **`results.py`**: JSON output transformation and saving
 - **`analytics.py`**: Neutral scaling analysis with dataclasses - runs post-benchmark for reports
 - **`report_generator.py`**: Markdown report generation from analytics data
 - **`zpool_iostat_collector.py`**: Background collection of `zpool iostat` telemetry during benchmarks
@@ -103,21 +101,14 @@ report = generate_markdown_report(analysis_dict, output_path)
 
 ## Analysis Pipeline
 
-Two analysis systems coexist:
+Post-benchmark analysis is handled by the **analytics engine** (`analytics.py`):
 
-1. **Grading Analysis** (`analysis.py`) - Legacy
-   - Runs during `save_results_to_json()`
-   - Embeds A-F grades in JSON output
-   - Generates issues and recommendations
-   - Used for quick pass/fail assessment
+- Runs after benchmark completion via `ResultAnalyzer`
+- Neutral data presentation (no grades or judgments)
+- Generates separate `_analytics.json` and `_report.md` files
+- Focuses on scaling patterns, deltas, and observations
 
-2. **Scaling Analytics** (`analytics.py`) - v2.1
-   - Runs after benchmark completion
-   - Neutral data presentation (no grades)
-   - Generates separate `_analytics.json` and `_report.md`
-   - Better for understanding performance characteristics
-
-**Future Direction:** The grading system may be deprecated in favor of neutral analytics.
+The analytics data is kept separate from the main results JSON to maintain clean separation between raw benchmark data and derived analysis.
 
 ## Adding New Benchmarks
 
