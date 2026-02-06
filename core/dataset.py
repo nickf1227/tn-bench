@@ -190,14 +190,15 @@ def validate_space(pool_name, cores, iterations):
     Args:
         pool_name: Name of the pool to check
         cores: Number of CPU cores (determines thread count)
-        iterations: Number of iterations to run
+        iterations: Number of iterations to run (not used for space calc - space is freed between iterations)
         
     Returns:
         tuple: (has_space, available_gib, required_gib)
     """
     available_bytes = get_dataset_available_bytes(pool_name)
-    required_bytes = 20 * cores * iterations * (1024 ** 3)
+    # Space is freed between iterations, so we only need space for one iteration
+    required_bytes = 20 * cores * (1024 ** 3)
     available_gib = available_bytes / (1024 ** 3)
-    required_gib = 20 * cores * iterations
+    required_gib = 20 * cores
     
     return available_bytes >= required_bytes, available_gib, required_gib
