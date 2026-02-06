@@ -178,7 +178,7 @@ class ResultAnalyzer:
         }
 
     def _analyze_disks(self) -> Dict[str, Any]:
-        """Compare disk performance within pools."""
+        """Compare disk performance within pools using pool-relative metrics."""
         disks = self.results.get("disks", [])
         if not disks:
             return {}
@@ -197,21 +197,40 @@ class ResultAnalyzer:
                 "speed_mbps": round(speed, 1)
             })
 
-        # Calculate pool averages and variance
+        # Build pool-relative comparison tables
         pool_stats = {}
         for pool, dlist in pool_disks.items():
             if len(dlist) < 2:
                 continue
 
             speeds = [d["speed_mbps"] for d in dlist]
-            avg = sum(speeds) / len(speeds)
-            variance = max(speeds) - min(speeds)
+            pool_avg = sum(speeds) / len(speeds)
+            pool_min = min(speeds)
+            pool_max = max(speeds)
+
+            # Build per-disk comparison
+            disk_table = []
+            for d in dlist:
+                speed = d["speed_mbps"]
+                pct_of_pool = (speed / pool_avg * 100) if pool_avg > 0 else 0
+                vs_fastest = (speed / pool_max * 100) if pool_max > 0 else 0
+
+                disk_table.append({
+                    "disk": d["name"],
+                    "model": d["model"],
+                    "speed_mbps": speed,
+                    "pct_of_pool_avg": round(pct_of_pool, 1),
+                    "pct_of_pool_max": round(vs_fastest, 1)
+                })
+
+            # Sort by speed
+            disk_table.sort(key=lambda x: x["speed_mbps"], reverse=True)
 
             pool_stats[pool] = {
-                "disks": dlist,
-                "average_mbps": round(avg, 1),
-                "range_mbps": round(variance, 1),
-                "variance_pct": round((variance / avg * 100), 1) if avg > 0 else 0
+                "disks": disk_table,
+                "pool_average_mbps": round(pool_avg, 1),
+                "pool_range_mbps": round(pool_max - pool_min, 1),
+                "variance_pct": round((pool_max - pool_min) / pool_avg * 100, 1) if pool_avg > 0 else 0
             }
 
         return pool_stats
