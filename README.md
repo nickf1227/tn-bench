@@ -7,8 +7,12 @@
 - Collects system information using TrueNAS API.
 - Benchmarks system performance using `dd` command.
 - Provides detailed information about system, pools, and disks.
-- Supports multiple pools.
-- Space validation
+- Supports multiple pools with interactive selection.
+- Configurable iteration counts for both pool and disk benchmarks.
+- Space validation before running benchmarks.
+- Drive Writes Per Day (DWPD) calculation for pool benchmarks.
+- Colorized output for better readability.
+- JSON output with structured schema for sharing results.
 
 
 ### Running the Script is a simple git clone
@@ -27,8 +31,10 @@ The script will display system and pool information, then prompt you to continue
 ### Benchmarking Process
 
 - **Dataset Creation**: The script creates a temporary dataset in each pool. The dataset is created with a 1M Record Size with no Compression and sync=Disabled using `midclt call pool.dataset.create`
-- **Pool Write Benchmark**: The script performs four runs of the write benchmark using `dd` with varying thread counts. We are using `/dev/urandom` as our input file, so CPU performance may be relevant. This is by design as `/dev/zero` is flawed for this purpoose, and CPU stress is expected in real-world use anyway. The data is written in 1M chunks to a dataset with a 1M record size. For each thread, 20G of data is written. This scales with the number of threads, so a system with 16 Threads would write 320G of data.
-- **Pool Read Benchmark**: The script performs four runs of the read benchmark using `dd` with varying thread counts. We are using `/dev/null` as out output file, so RAM speed may be relevant. The data is read in 1M chunks from a dataset with a 1M record size. For each thread, the previously written 20G of data is read. This scales with the number of threads, so a system with 16 Threads would have read 320G of data.
+- **Space Validation**: Before running benchmarks, the script checks available space in the dataset and warns if insufficient (requires 20 GiB × thread count). You can choose to proceed anyway or skip the pool.
+- **Pool Write Benchmark**: The script performs write benchmarks using `dd` across four thread-count configurations (1, cores÷4, cores÷2, and cores). Each configuration runs N times (configurable, default 2). We use `/dev/urandom` as our input file, so CPU performance may be relevant. This is by design as `/dev/zero` is flawed for this purpose, and CPU stress is expected in real-world use anyway. The data is written in 1M chunks to a dataset with a 1M record size. For each thread, 20G of data is written. This scales with the number of threads, so a system with 16 Threads would write 320G of data per iteration.
+- **Pool Read Benchmark**: The script performs read benchmarks using `dd` across the same four thread-count configurations. We are using `/dev/null` as our output file, so RAM speed may be relevant. The data is read in 1M chunks from a dataset with a 1M record size. For each thread, the previously written 20G of data is read.
+- **DWPD Calculation**: After each pool's benchmarks complete, the script calculates Drive Writes Per Day (DWPD) based on total data written, pool capacity, and test duration.
 
 **NOTE:** ZFS ARC will also be used and will impact your results. This may be undesirable in some circumstances, and the `zfs_arc_max` can be set to `1` (which means 1 byte) to prevent ARC from caching. Setting it back to `0` will restore the default behavior, but the system will need to be restarted!
 
@@ -39,7 +45,7 @@ Example of `arcstat -f time,hit%,dh%,ph%,mh% 10` running while the benchmark is 
 <img src="https://github.com/user-attachments/assets/4bdeea59-c88c-46b1-b17a-939594c4eda1" width="50%" />
 
 
-- **Disk Benchmark**: The script performs four runs of the read benchmark using `dd` with varying thread counts. Calculated based on the size of your RAM and the disks, data already on each disk is read in 4K chunks to `/dev/null` , making this a 4K sequential read test. 4K was chosen because `ashift=12` for all recent ZFS pools created in TrueNAS. The amount of data read is so large to try and avoid ARC caching. Run-to-run variance is still expected, particularly on SSDs, as the data ends up inside of internal caches. For this reason, it is run 4 times and averaged.
+- **Disk Benchmark**: The script performs sequential read benchmarks on individual disks using `dd`. The read size is calculated as `min(system RAM, disk size)` to work around ARC caching. Data is read in 4K chunks to `/dev/null`, making this a 4K sequential read test. 4K was chosen because `ashift=12` for all recent ZFS pools created in TrueNAS. The number of iterations is configurable (default 2). Run-to-run variance is expected, particularly on SSDs, as data may end up in internal caches.
   
 - **Results**: The script displays the results for each run and the average speed. This should give you an idea of the impacts of various thread-counts (as a synthetic representation of client-counts) and the ZFS ARC caching mechanism. 
 
@@ -55,7 +61,9 @@ Example of `arcstat -f time,hit%,dh%,ph%,mh% 10` running while the benchmark is 
 ### Resource Requirements
 | Resource Type          | Requirement                                  |
 |------------------------|---------------------------------------------|
-| Pool Test Space        | 20 GiB per thread                           |
+| Pool Test Space        | 20 GiB per thread per iteration             |
+| Thread Configurations  | 4 (1, cores÷4, cores÷2, cores)              |
+| Default Iterations     | 2 per configuration                         |
 
 ### Execution Time
 - **Small all-flash systems**: ~10-30 minutes
@@ -122,8 +130,18 @@ A shareable JSON file can be generated, we have an initial version 1.0 schema, w
           "read_speeds": [4775.63, 5029.35],
           "average_read_speed": 4902.49,
           "iterations": 2
+        },
+        {
+          "threads": 10,
+          "write_speeds": [1850.32, 1823.45],
+          "average_write_speed": 1836.89,
+          "read_speeds": [15234.56, 14987.23],
+          "average_read_speed": 15110.90,
+          "iterations": 2
         }
-      ]
+      ],
+      "dwpd": 0.15,
+      "total_writes_gib": 640.0
     }
   ],
   "disks": [

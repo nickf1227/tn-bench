@@ -317,7 +317,7 @@ def run_read_benchmark(threads, bytes_per_thread, block_size, file_prefix, datas
 
         threads_list = []
         for i in range(threads):
-            command = f"dd if={dataset_path}/{file_prefix}{i}.dat of=/dev/null bs={block_size} count={bytes_per_thread * 2} status=none"
+            command = f"dd if={dataset_path}/{file_prefix}{i}.dat of=/dev/null bs={block_size} count={bytes_per_thread} status=none"
             thread = threading.Thread(target=run_dd_command, args=(command,))
             thread.start()
             threads_list.append(thread)
@@ -327,7 +327,7 @@ def run_read_benchmark(threads, bytes_per_thread, block_size, file_prefix, datas
 
         end_time = time.time()
         total_time_taken = end_time - start_time
-        total_bytes = threads * bytes_per_thread * 2 * 1024 * 1024
+        total_bytes = threads * bytes_per_thread * 1024 * 1024
         read_speed = total_bytes / 1024 / 1024 / total_time_taken
         speeds.append(read_speed)
         print_info(f"Run {run + 1} read speed: {color_text(f'{read_speed:.2f} MB/s', 'YELLOW')}")
@@ -568,10 +568,103 @@ def get_dataset_available_bytes(pool_name):
     print_error(f"Dataset {dataset_name} not found.")
     return 0
 
-def save_results_to_json(results, output_path):
+def save_results_to_json(results, output_path, start_time, end_time):
     try:
+        # Transform results to match README schema
+        transformed_results = {
+            "schema_version": "1.0",
+            "metadata": {
+                "start_timestamp": time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(start_time)),
+                "end_timestamp": time.strftime("%Y-%m-%dT%H:%M:%S", time.localtime(end_time)),
+                "duration_minutes": round((end_time - start_time) / 60, 2),
+                "benchmark_config": results.get("benchmark_config", {})
+            },
+            "system": {
+                "os_version": results.get("system_info", {}).get("version", "N/A"),
+                "load_average_1m": results.get("system_info", {}).get("loadavg", ["N/A", "N/A", "N/A"])[0],
+                "load_average_5m": results.get("system_info", {}).get("loadavg", ["N/A", "N/A", "N/A"])[1],
+                "load_average_15m": results.get("system_info", {}).get("loadavg", ["N/A", "N/A", "N/A"])[2],
+                "cpu_model": results.get("system_info", {}).get("model", "N/A"),
+                "logical_cores": results.get("system_info", {}).get("cores", "N/A"),
+                "physical_cores": results.get("system_info", {}).get("physical_cores", "N/A"),
+                "system_product": results.get("system_info", {}).get("system_product", "N/A"),
+                "memory_gib": round(results.get("system_info", {}).get("physmem", 0) / (1024 ** 3), 2)
+            },
+            "pools": [],
+            "disks": []
+        }
+        
+        # Process pools
+        for pool in results.get("pools", []):
+            pool_entry = {
+                "name": pool.get("name", "N/A"),
+                "path": pool.get("path", "N/A"),
+                "status": pool.get("status", "N/A"),
+                "vdevs": [],
+                "benchmark": []
+            }
+            
+            # Extract vdev information
+            topology = pool.get("topology", {})
+            data = topology.get("data", []) if topology else []
+            for vdev in data:
+                vdev_entry = {
+                    "name": vdev.get("name", "N/A"),
+                    "type": vdev.get("type", "N/A"),
+                    "disk_count": len(vdev.get("children", []))
+                }
+                pool_entry["vdevs"].append(vdev_entry)
+            
+            # Add benchmark results if available
+            if "benchmark_results" in pool:
+                for bench in pool["benchmark_results"]:
+                    bench_entry = {
+                        "threads": bench["threads"],
+                        "write_speeds": [round(s, 2) for s in bench["write_speeds"]],
+                        "average_write_speed": round(bench["average_write_speed"], 2),
+                        "read_speeds": [round(s, 2) for s in bench["read_speeds"]],
+                        "average_read_speed": round(bench["average_read_speed"], 2),
+                        "iterations": bench["iterations"]
+                    }
+                    pool_entry["benchmark"].append(bench_entry)
+            
+            # Add DWPD info if available
+            if "dwpd" in pool:
+                pool_entry["dwpd"] = round(pool["dwpd"], 2)
+                pool_entry["total_writes_gib"] = round(pool["total_writes_gib"], 2)
+            
+            transformed_results["pools"].append(pool_entry)
+        
+        # Process disks
+        disk_bench_dict = {}
+        for disk_bench in results.get("disk_benchmark", []):
+            disk_bench_dict[disk_bench.get("disk", "N/A")] = disk_bench
+        
+        pool_membership = results.get("pool_membership", {})
+        for disk in results.get("disks", []):
+            disk_entry = {
+                "name": disk.get("name", "N/A"),
+                "model": disk.get("model", "N/A"),
+                "serial": disk.get("serial", "N/A"),
+                "zfs_guid": disk.get("zfs_guid", "N/A"),
+                "pool": pool_membership.get(disk.get("zfs_guid"), "N/A"),
+                "size_gib": round((disk.get("size", 0) or 0) / (1024 ** 3), 2)
+            }
+            
+            # Add benchmark if available
+            if disk.get("name") in disk_bench_dict:
+                bench = disk_bench_dict[disk["name"]]
+                disk_entry["benchmark"] = {
+                    "speeds": [round(s, 2) for s in bench.get("speeds", [])],
+                    "average_speed": round(bench.get("average_speed", 0), 2),
+                    "iterations": bench.get("iterations", 0)
+                }
+            
+            transformed_results["disks"].append(disk_entry)
+        
+        # Write transformed results
         with open(output_path, 'w') as f:
-            json.dump(results, f, indent=4)
+            json.dump(transformed_results, f, indent=2)
         print_success(f"Benchmark results saved to: {os.path.abspath(output_path)}")
     except Exception as e:
         print_error(f"Error saving results to JSON: {str(e)}")
@@ -668,6 +761,7 @@ if __name__ == "__main__":
     disk_info = get_disk_info()
     pool_membership = get_pool_membership()
     benchmark_results["disks"] = disk_info
+    benchmark_results["pool_membership"] = pool_membership  # Store for JSON transformation
     print_disk_info_table(disk_info, pool_membership)
 
     # Ask user which pools to test
@@ -685,7 +779,7 @@ if __name__ == "__main__":
     benchmark_results["benchmark_config"]["disk_iterations"] = disk_iterations
 
     cores = system_info.get("cores", 1)
-    bytes_per_thread_series_1 = 10240
+    bytes_per_thread = 20480  # 20 GiB per thread (20480 blocks × 1M = 20 GiB)
     block_size_series_1 = "1M"
     file_prefix_series_1 = "file_"
 
@@ -804,4 +898,4 @@ if __name__ == "__main__":
             print_info(f"Dataset {dataset_name} not deleted.")
 
     # Save results to JSON
-    save_results_to_json(benchmark_results, args.output)
+    save_results_to_json(benchmark_results, args.output, start_time, end_time)
