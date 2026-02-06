@@ -9,21 +9,62 @@ import os
 sys.path.insert(0, '/Users/nickf/.openclaw/workspace/Projects/TN-Bench/tn-bench')
 
 
-def test_zpool_iostat_parsing():
-    """Test the zpool iostat line parsing logic."""
-    print("Testing zpool iostat line parsing...")
+def test_value_with_suffix_parsing():
+    """Test parsing values with unit suffixes."""
+    print("Testing value suffix parsing...")
     
     from core.zpool_iostat_collector import ZpoolIostatCollector
     
     collector = ZpoolIostatCollector("tank")
     
-    # Test cases for zpool iostat output format (basic without extended stats)
+    test_cases = [
+        ("0", 0.0),
+        ("123", 123.0),
+        ("1.77K", 1770.0),
+        ("4.47K", 4470.0),
+        ("4.18K", 4180.0),
+        ("292M", 292000000.0),
+        ("1.5G", 1500000000.0),
+        ("2.5T", 2500000000000.0),
+        ("-", 0.0),
+        ("", 0.0),
+    ]
+    
+    passed = 0
+    failed = 0
+    
+    for value, expected in test_cases:
+        result = collector._parse_value_with_suffix(value)
+        if abs(result - expected) < 0.01:  # Allow small floating point tolerance
+            print(f"  ✓ '{value}' -> {result}")
+            passed += 1
+        else:
+            print(f"  ✗ '{value}' -> {result} (expected {expected})")
+            failed += 1
+    
+    print(f"\nSuffix parsing: {passed} passed, {failed} failed")
+    return failed == 0
+
+
+def test_zpool_iostat_parsing():
+    """Test the zpool iostat line parsing logic."""
+    print("\nTesting zpool iostat line parsing...")
+    
+    from core.zpool_iostat_collector import ZpoolIostatCollector
+    
+    collector = ZpoolIostatCollector("tank")
+    
+    # Test cases for zpool iostat output format
     test_cases = [
         # Basic format: pool capacity_used capacity_avail ops_r ops_w bw_r bw_w
         ("tank 1.23T 8.77T 0 123 0.0 12.3M", True),
-        ("data 500G 1.5T 5 10 100.5 1.2M", True),  # Different pool - collector collects all, filtering done later
+        ("data 500G 1.5T 5 10 100.5 1.2M", True),
         ("tank 0 0 0 0 0.0 0.0", True),
         ("tank 100M 900M 1 2 1.0K 2.0K", True),
+        # Extended stats format with K/M suffixes on operations
+        ("inferno 3.29T 1.07T 0 1.77K 0 292M - 6ms - 164us - 1us - 6ms - - - -", True),
+        ("inferno 3.29T 1.07T 3 4.47K 23.9K 1021M 49us 3ms 49us 200us 1us 960ns - 3ms - - - -", True),
+        ("inferno 3.29T 1.07T 1 4.18K 7.98K 984M 49us 2ms 49us 207us 1us 1us - 1ms - - - -", True),
         ("capacity operations bandwidth", False),  # Header, should skip
         ("------ ------ ------", False),  # Separator, should skip
     ]
@@ -220,7 +261,8 @@ def main():
     
     results = []
     
-    results.append(("Parsing", test_zpool_iostat_parsing()))
+    results.append(("Value Suffix Parsing", test_value_with_suffix_parsing()))
+    results.append(("Line Parsing", test_zpool_iostat_parsing()))
     results.append(("Telemetry Structure", test_telemetry_structure()))
     results.append(("Collector Lifecycle", test_collector_lifecycle()))
     results.append(("Integration", test_integration()))

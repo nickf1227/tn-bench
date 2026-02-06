@@ -113,6 +113,35 @@ class ZpoolIostatCollector:
         
         return cmd
     
+    def _parse_value_with_suffix(self, value: str) -> float:
+        """
+        Parse a value that may have a unit suffix (K, M, G).
+        
+        Args:
+            value: String like "1.77K", "292M", "0", etc.
+            
+        Returns:
+            Float value (e.g., 1770.0 for "1.77K")
+        """
+        if not value or value == "-":
+            return 0.0
+            
+        value = value.strip()
+        suffix_multipliers = {
+            'K': 1_000,
+            'M': 1_000_000,
+            'G': 1_000_000_000,
+            'T': 1_000_000_000_000,
+        }
+        
+        # Check if last character is a suffix
+        if value[-1] in suffix_multipliers:
+            suffix = value[-1]
+            number = value[:-1]
+            return float(number) * suffix_multipliers[suffix]
+        else:
+            return float(value)
+    
     def _parse_line(self, line: str) -> Optional[ZpoolIostatSample]:
         """
         Parse a line of zpool iostat output.
@@ -136,8 +165,8 @@ class ZpoolIostatCollector:
                     pool_name=parts[0],
                     capacity_used=parts[1],
                     capacity_avail=parts[2],
-                    operations_read=float(parts[3]),
-                    operations_write=float(parts[4]),
+                    operations_read=self._parse_value_with_suffix(parts[3]),
+                    operations_write=self._parse_value_with_suffix(parts[4]),
                     bandwidth_read=parts[5],
                     bandwidth_write=parts[6],
                     total_wait_read=parts[7],
@@ -159,8 +188,8 @@ class ZpoolIostatCollector:
                     pool_name=parts[0],
                     capacity_used=parts[1],
                     capacity_avail=parts[2],
-                    operations_read=float(parts[3]),
-                    operations_write=float(parts[4]),
+                    operations_read=self._parse_value_with_suffix(parts[3]),
+                    operations_write=self._parse_value_with_suffix(parts[4]),
                     bandwidth_read=parts[5],
                     bandwidth_write=parts[6],
                     total_wait_read="-",
