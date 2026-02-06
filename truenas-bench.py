@@ -199,6 +199,26 @@ def ask_disk_block_size():
             print_error("Invalid choice. Please enter 1, 2, 3, or 4")
 
 
+def ask_seek_threads():
+    """Ask user for number of threads in seek_stress mode."""
+    print_header("Seek-Stress Thread Count")
+    print_info("How many concurrent threads per disk for seek-stress mode?")
+    print_bullet("• More threads = higher stress on disk seek mechanisms")
+    print_bullet("• Recommended: 4-8 threads per disk")
+    
+    while True:
+        response = input(color_text("\nEnter thread count [4]: ", "BOLD")).strip()
+        if not response:
+            return 4
+        try:
+            count = int(response)
+            if 1 <= count <= 32:
+                return count
+            print_error("Please enter a number between 1 and 32")
+        except ValueError:
+            print_error("Invalid input. Please enter a number")
+
+
 def calculate_dwpd(total_writes_gib, pool_capacity_gib, test_duration_seconds):
     """Calculate Drive Writes Per Day (DWPD)."""
     if pool_capacity_gib <= 0:
