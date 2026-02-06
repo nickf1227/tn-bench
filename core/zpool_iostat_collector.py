@@ -17,7 +17,7 @@ from utils import print_info, print_success, print_error, print_warning, color_t
 
 
 @dataclass
-class IostatSample:
+class ZpoolIostatSample:
     """A single sample of zpool iostat data."""
     timestamp: float
     timestamp_iso: str
@@ -41,7 +41,7 @@ class IostatSample:
 
 
 @dataclass
-class IostatTelemetry:
+class ZpoolIostatTelemetry:
     """Complete telemetry data for a benchmark run."""
     pool_name: str
     start_time: float
@@ -50,7 +50,7 @@ class IostatTelemetry:
     end_time_iso: Optional[str] = None
     warmup_iterations: int = 0
     cooldown_iterations: int = 0
-    samples: List[IostatSample] = field(default_factory=list)
+    samples: List[ZpoolIostatSample] = field(default_factory=list)
     
     def to_dict(self) -> dict:
         """Convert telemetry to dictionary for JSON serialization."""
@@ -68,12 +68,12 @@ class IostatTelemetry:
         }
 
 
-class ZPoolIostatCollector:
+class ZpoolIostatCollector:
     """
     Background collector for zpool iostat telemetry.
     
     Usage:
-        collector = ZPoolIostatCollector("tank", interval=1)
+        collector = ZpoolIostatCollector("tank", interval=1)
         collector.start(warmup_iterations=3)
         # ... run benchmark ...
         telemetry = collector.stop(cooldown_iterations=3)
@@ -81,7 +81,7 @@ class ZPoolIostatCollector:
     
     def __init__(self, pool_name: str, interval: int = 1, extended_stats: bool = True):
         """
-        Initialize the iostat collector.
+        Initialize the zpool iostat collector.
         
         Args:
             pool_name: Name of the ZFS pool to monitor
@@ -91,7 +91,7 @@ class ZPoolIostatCollector:
         self.pool_name = pool_name
         self.interval = interval
         self.extended_stats = extended_stats
-        self.telemetry: Optional[IostatTelemetry] = None
+        self.telemetry: Optional[ZpoolIostatTelemetry] = None
         self._process: Optional[subprocess.Popen] = None
         self._thread: Optional[threading.Thread] = None
         self._stop_event = threading.Event()
@@ -113,12 +113,12 @@ class ZPoolIostatCollector:
         
         return cmd
     
-    def _parse_line(self, line: str) -> Optional[IostatSample]:
+    def _parse_line(self, line: str) -> Optional[ZpoolIostatSample]:
         """
         Parse a line of zpool iostat output.
         
         Returns:
-            IostatSample if parsed successfully, None otherwise
+            ZpoolIostatSample if parsed successfully, None otherwise
         """
         parts = line.strip().split()
         if len(parts) < 7:
@@ -130,7 +130,7 @@ class ZPoolIostatCollector:
             
             # Handle extended stats format
             if self.extended_stats and len(parts) >= 15:
-                return IostatSample(
+                return ZpoolIostatSample(
                     timestamp=timestamp,
                     timestamp_iso=datetime.fromtimestamp(timestamp).isoformat(),
                     pool_name=parts[0],
@@ -153,7 +153,7 @@ class ZPoolIostatCollector:
                 )
             else:
                 # Basic format without extended stats
-                return IostatSample(
+                return ZpoolIostatSample(
                     timestamp=timestamp,
                     timestamp_iso=datetime.fromtimestamp(timestamp).isoformat(),
                     pool_name=parts[0],
@@ -175,13 +175,13 @@ class ZPoolIostatCollector:
                     trim_wait="-"
                 )
         except (ValueError, IndexError) as e:
-            print_warning(f"Failed to parse iostat line: {line.strip()} - {e}")
+            print_warning(f"Failed to parse zpool iostat line: {line.strip()} - {e}")
             return None
     
     def _collection_loop(self):
         """Main collection loop running in background thread."""
         cmd = self._build_command()
-        print_info(f"Starting iostat collection for pool '{self.pool_name}' (interval: {self.interval}s)")
+        print_info(f"Starting zpool iostat collection for pool '{self.pool_name}' (interval: {self.interval}s)")
         
         try:
             self._process = subprocess.Popen(
@@ -218,11 +218,11 @@ class ZPoolIostatCollector:
                         
                 except Exception as e:
                     if not self._stop_event.is_set():
-                        print_warning(f"Error reading iostat output: {e}")
+                        print_warning(f"Error reading zpool iostat output: {e}")
                     
         except Exception as e:
             if not self._stop_event.is_set():
-                print_error(f"Iostat collection error: {e}")
+                print_error(f"Zpool iostat collection error: {e}")
         finally:
             self._cleanup_process()
             
@@ -245,7 +245,7 @@ class ZPoolIostatCollector:
     
     def start(self, warmup_iterations: int = 3) -> bool:
         """
-        Start the iostat collector.
+        Start the zpool iostat collector.
         
         Args:
             warmup_iterations: Number of samples to collect before benchmark starts
@@ -254,7 +254,7 @@ class ZPoolIostatCollector:
             True if started successfully, False otherwise
         """
         if self._running:
-            print_warning("Iostat collector already running")
+            print_warning("Zpool iostat collector already running")
             return False
             
         self._warmup_target = warmup_iterations
@@ -264,7 +264,7 @@ class ZPoolIostatCollector:
         self._stop_event.clear()
         
         start_time = time.time()
-        self.telemetry = IostatTelemetry(
+        self.telemetry = ZpoolIostatTelemetry(
             pool_name=self.pool_name,
             start_time=start_time,
             start_time_iso=datetime.fromtimestamp(start_time).isoformat(),
@@ -277,51 +277,51 @@ class ZPoolIostatCollector:
         
         # Wait for warmup if specified
         if warmup_iterations > 0:
-            print_info(f"Warming up iostat collector ({warmup_iterations} samples)...")
+            print_info(f"Warming up zpool iostat collector ({warmup_iterations} samples)...")
             while self._warmup_count < warmup_iterations:
                 if not self._running or self._stop_event.is_set():
                     return False
                 time.sleep(0.1)
-            print_success("Iostat collector warmup complete")
+            print_success("Zpool iostat collector warmup complete")
         
         return True
     
     def signal_benchmark_start(self):
         """Signal that the benchmark is starting (transition from warmup to active)."""
         self._benchmark_active = True
-        print_info("Iostat collector: benchmark phase started")
+        print_info("Zpool iostat collector: benchmark phase started")
         
     def signal_benchmark_end(self):
         """Signal that the benchmark has ended (transition to cooldown)."""
         self._benchmark_active = False
-        print_info("Iostat collector: benchmark phase ended")
+        print_info("Zpool iostat collector: benchmark phase ended")
     
-    def stop(self, cooldown_iterations: int = 3) -> Optional[IostatTelemetry]:
+    def stop(self, cooldown_iterations: int = 3) -> Optional[ZpoolIostatTelemetry]:
         """
-        Stop the iostat collector.
+        Stop the zpool iostat collector.
         
         Args:
             cooldown_iterations: Number of samples to collect after benchmark ends
             
         Returns:
-            IostatTelemetry object with all collected data, or None if not running
+            ZpoolIostatTelemetry object with all collected data, or None if not running
         """
         if not self._running:
-            print_warning("Iostat collector not running")
+            print_warning("Zpool iostat collector not running")
             return self.telemetry
             
         self._cooldown_target = cooldown_iterations
         
         # Wait for cooldown if specified
         if cooldown_iterations > 0 and self.telemetry:
-            print_info(f"Cooling down iostat collector ({cooldown_iterations} samples)...")
+            print_info(f"Cooling down zpool iostat collector ({cooldown_iterations} samples)...")
             current_count = len(self.telemetry.samples)
             target = current_count + cooldown_iterations
             while len(self.telemetry.samples) < target:
                 if self._stop_event.is_set():
                     break
                 time.sleep(0.1)
-            print_success("Iostat collector cooldown complete")
+            print_success("Zpool iostat collector cooldown complete")
         
         self._stop_event.set()
         self._running = False
@@ -340,7 +340,7 @@ class ZPoolIostatCollector:
         self._cleanup_process()
         
         if self.telemetry:
-            print_success(f"Iostat collection complete: {len(self.telemetry.samples)} samples")
+            print_success(f"Zpool iostat collection complete: {len(self.telemetry.samples)} samples")
             
         return self.telemetry
     
@@ -353,12 +353,12 @@ class ZPoolIostatCollector:
         return len(self.telemetry.samples) if self.telemetry else 0
 
 
-class IostatCollectorWithContext:
+class ZpoolIostatCollectorWithContext:
     """
-    Context manager for easy iostat collection integration.
+    Context manager for easy zpool iostat collection integration.
     
     Usage:
-        with IostatCollectorWithContext("tank", warmup=3, cooldown=3) as collector:
+        with ZpoolIostatCollectorWithContext("tank", warmup=3, cooldown=3) as collector:
             collector.signal_benchmark_start()
             # ... run benchmark ...
             collector.signal_benchmark_end()
@@ -373,8 +373,8 @@ class IostatCollectorWithContext:
         self.warmup = warmup
         self.cooldown = cooldown
         self.extended_stats = extended_stats
-        self.collector = ZPoolIostatCollector(pool_name, interval, extended_stats)
-        self.telemetry: Optional[IostatTelemetry] = None
+        self.collector = ZpoolIostatCollector(pool_name, interval, extended_stats)
+        self.telemetry: Optional[ZpoolIostatTelemetry] = None
         
     def __enter__(self):
         self.collector.start(warmup_iterations=self.warmup)
@@ -393,9 +393,9 @@ class IostatCollectorWithContext:
         self.collector.signal_benchmark_end()
 
 
-def calculate_iostat_summary(telemetry: IostatTelemetry) -> dict:
+def calculate_zpool_iostat_summary(telemetry: ZpoolIostatTelemetry) -> dict:
     """
-    Calculate summary statistics from telemetry data.
+    Calculate summary statistics from zpool iostat telemetry data.
     
     Returns:
         Dictionary with summary statistics

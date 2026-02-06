@@ -1,7 +1,7 @@
 """
 ZFS Pool benchmark - sequential write/read across varying thread counts.
 Space-optimized version: cleans up test files between iterations to reduce space requirements.
-Integrates with iostat collector for telemetry during benchmark runs.
+Integrates with zpool iostat collector for telemetry during benchmark runs.
 """
 
 import subprocess
@@ -86,10 +86,10 @@ def run_single_iteration(threads, bytes_per_thread, block_size, file_prefix, dat
 
 
 class ZFSPoolBenchmark(BenchmarkBase):
-    """ZFS Pool sequential write/read benchmark with optional iostat telemetry collection."""
+    """ZFS Pool sequential write/read benchmark with optional zpool iostat telemetry collection."""
     
     name = "zfs_pool"
-    description = "ZFS Pool sequential write/read benchmark with varying thread counts and iostat telemetry"
+    description = "ZFS Pool sequential write/read benchmark with varying thread counts and zpool iostat telemetry"
     
     def __init__(
         self,
@@ -97,10 +97,10 @@ class ZFSPoolBenchmark(BenchmarkBase):
         cores,
         dataset_path,
         iterations=2,
-        collect_iostat=True,
-        iostat_interval=1,
-        iostat_warmup=3,
-        iostat_cooldown=3
+        collect_zpool_iostat=True,
+        zpool_iostat_interval=1,
+        zpool_iostat_warmup=3,
+        zpool_iostat_cooldown=3
     ):
         self.pool_name = pool_name
         self.cores = cores
@@ -110,13 +110,13 @@ class ZFSPoolBenchmark(BenchmarkBase):
         self.block_size = "1M"
         self.file_prefix = "file_"
         
-        # Iostat collection settings
-        self.collect_iostat = collect_iostat
-        self.iostat_interval = iostat_interval
-        self.iostat_warmup = iostat_warmup
-        self.iostat_cooldown = iostat_cooldown
-        self.iostat_collector = None
-        self.iostat_telemetry = None
+        # Zpool iostat collection settings
+        self.collect_zpool_iostat = collect_zpool_iostat
+        self.zpool_iostat_interval = zpool_iostat_interval
+        self.zpool_iostat_warmup = zpool_iostat_warmup
+        self.zpool_iostat_cooldown = zpool_iostat_cooldown
+        self.zpool_iostat_collector = None
+        self.zpool_iostat_telemetry = None
     
     def validate(self) -> bool:
         """Check if dataset path exists and is writable."""
@@ -131,21 +131,21 @@ class ZFSPoolBenchmark(BenchmarkBase):
         max_threads = self.cores
         return 20 * max_threads  # Only need space for one iteration at a time
     
-    def _run_benchmark_with_iostat(self):
+    def _run_benchmark_with_zpool_iostat(self):
         """
-        Run the benchmark with iostat collection.
+        Run the benchmark with zpool iostat collection.
         
         Returns:
-            dict: Benchmark results with iostat telemetry
+            dict: Benchmark results with zpool iostat telemetry
         """
         # Import here to avoid circular imports and allow running without collector
         try:
-            from core.iostat_collector import (
-                ZPoolIostatCollector, calculate_iostat_summary
+            from core.zpool_iostat_collector import (
+                ZpoolIostatCollector, calculate_zpool_iostat_summary
             )
         except ImportError:
-            print_info("Iostat collector not available, running without telemetry")
-            return self._run_benchmark_without_iostat()
+            print_info("Zpool iostat collector not available, running without telemetry")
+            return self._run_benchmark_without_zpool_iostat()
         
         escaped_pool_name = self.pool_name.replace(" ", "\\ ")
         thread_counts = [1, self.cores // 4, self.cores // 2, self.cores]
@@ -153,20 +153,20 @@ class ZFSPoolBenchmark(BenchmarkBase):
         total_bytes_written = 0
         
         # Initialize and start the collector
-        self.iostat_collector = ZPoolIostatCollector(
+        self.zpool_iostat_collector = ZpoolIostatCollector(
             pool_name=self.pool_name,
-            interval=self.iostat_interval,
+            interval=self.zpool_iostat_interval,
             extended_stats=True
         )
         
-        collector_started = self.iostat_collector.start(
-            warmup_iterations=self.iostat_warmup
+        collector_started = self.zpool_iostat_collector.start(
+            warmup_iterations=self.zpool_iostat_warmup
         )
         
         if not collector_started:
-            print_info("Failed to start iostat collector, continuing without telemetry")
-            self.iostat_collector = None
-            return self._run_benchmark_without_iostat()
+            print_info("Failed to start zpool iostat collector, continuing without telemetry")
+            self.zpool_iostat_collector = None
+            return self._run_benchmark_without_zpool_iostat()
         
         try:
             # Run the benchmark
@@ -181,8 +181,8 @@ class ZFSPoolBenchmark(BenchmarkBase):
                     print_info(f"--- Iteration {iteration} of {self.iterations} ---")
                     
                     # Signal benchmark start on first iteration of first thread count
-                    if iteration == 1 and threads == thread_counts[0] and self.iostat_collector:
-                        self.iostat_collector.signal_benchmark_start()
+                    if iteration == 1 and threads == thread_counts[0] and self.zpool_iostat_collector:
+                        self.zpool_iostat_collector.signal_benchmark_start()
                     
                     write_speed, read_speed, bytes_written = run_single_iteration(
                         threads, self.bytes_per_thread, self.block_size,
@@ -195,8 +195,8 @@ class ZFSPoolBenchmark(BenchmarkBase):
                     print_info(f"Space freed after iteration {iteration}")
                     
                     # Signal benchmark end on last iteration of last thread count
-                    if iteration == self.iterations and threads == thread_counts[-1] and self.iostat_collector:
-                        self.iostat_collector.signal_benchmark_end()
+                    if iteration == self.iterations and threads == thread_counts[-1] and self.zpool_iostat_collector:
+                        self.zpool_iostat_collector.signal_benchmark_end()
                 
                 average_write_speed = sum(write_speeds) / len(write_speeds) if write_speeds else 0
                 average_read_speed = sum(read_speeds) / len(read_speeds) if read_speeds else 0
@@ -216,15 +216,15 @@ class ZFSPoolBenchmark(BenchmarkBase):
             raise
         finally:
             # Stop collector with cooldown
-            if self.iostat_collector:
-                self.iostat_telemetry = self.iostat_collector.stop(
-                    cooldown_iterations=self.iostat_cooldown
+            if self.zpool_iostat_collector:
+                self.zpool_iostat_telemetry = self.zpool_iostat_collector.stop(
+                    cooldown_iterations=self.zpool_iostat_cooldown
                 )
         
-        # Print iostat summary if available
-        if self.iostat_telemetry:
-            print_section(f"Iostat Telemetry Summary for Pool: {escaped_pool_name}")
-            summary = calculate_iostat_summary(self.iostat_telemetry)
+        # Print zpool iostat summary if available
+        if self.zpool_iostat_telemetry:
+            print_section(f"Zpool Iostat Telemetry Summary for Pool: {escaped_pool_name}")
+            summary = calculate_zpool_iostat_summary(self.zpool_iostat_telemetry)
             if summary:
                 ops = summary.get("operations_per_second", {})
                 print_bullet(f"Total samples: {summary.get('total_samples', 0)}")
@@ -238,12 +238,12 @@ class ZFSPoolBenchmark(BenchmarkBase):
         return {
             "benchmark_results": results,
             "total_bytes_written": total_bytes_written,
-            "iostat_telemetry": self.iostat_telemetry.to_dict() if self.iostat_telemetry else None
+            "zpool_iostat_telemetry": self.zpool_iostat_telemetry.to_dict() if self.zpool_iostat_telemetry else None
         }
     
-    def _run_benchmark_without_iostat(self):
+    def _run_benchmark_without_zpool_iostat(self):
         """
-        Run the benchmark without iostat collection (original behavior).
+        Run the benchmark without zpool iostat collection (original behavior).
         
         Returns:
             dict: Benchmark results
@@ -295,19 +295,19 @@ class ZFSPoolBenchmark(BenchmarkBase):
         """
         Run the ZFS pool benchmark across four thread-count configurations.
         
-        If collect_iostat is True (default), collects zpool iostat telemetry
+        If collect_zpool_iostat is True (default), collects zpool iostat telemetry
         during the benchmark with warmup and cooldown periods.
         
         Args:
             config: Optional configuration dictionary
             
         Returns:
-            dict: Results containing thread counts, speeds, metadata, and iostat telemetry.
+            dict: Results containing thread counts, speeds, metadata, and zpool iostat telemetry.
         """
-        if self.collect_iostat:
-            return self._run_benchmark_with_iostat()
+        if self.collect_zpool_iostat:
+            return self._run_benchmark_with_zpool_iostat()
         else:
-            return self._run_benchmark_without_iostat()
+            return self._run_benchmark_without_zpool_iostat()
     
     def print_summary(self, results):
         """
@@ -337,20 +337,20 @@ class ZFSPoolBenchmark(BenchmarkBase):
                 print_bullet(f"1M Seq Read Run {i+1}: {color_text(f'{speed:.2f} MB/s', 'YELLOW')}")
             print_bullet(f"1M Seq Read Avg: {color_text(f'{avg_read:.2f} MB/s', 'GREEN')}")
         
-        # Print iostat summary if available
-        if self.iostat_telemetry:
-            self._print_iostat_summary()
+        # Print zpool iostat summary if available
+        if self.zpool_iostat_telemetry:
+            self._print_zpool_iostat_summary()
     
-    def _print_iostat_summary(self):
-        """Print a summary of the collected iostat telemetry."""
-        if not self.iostat_telemetry:
+    def _print_zpool_iostat_summary(self):
+        """Print a summary of the collected zpool iostat telemetry."""
+        if not self.zpool_iostat_telemetry:
             return
         
-        print_section("Iostat Telemetry Summary")
+        print_section("Zpool Iostat Telemetry Summary")
         
         try:
-            from core.iostat_collector import calculate_iostat_summary
-            summary = calculate_iostat_summary(self.iostat_telemetry)
+            from core.zpool_iostat_collector import calculate_zpool_iostat_summary
+            summary = calculate_zpool_iostat_summary(self.zpool_iostat_telemetry)
             
             if summary:
                 ops = summary.get("operations_per_second", {})
@@ -360,16 +360,16 @@ class ZFSPoolBenchmark(BenchmarkBase):
                 print_bullet(f"Write ops/sec (avg/max): {ops.get('write_avg', 0):.2f} / {ops.get('write_max', 0):.2f}")
                 print_bullet(f"Total ops/sec (avg): {ops.get('total_avg', 0):.2f}")
         except ImportError:
-            print_bullet(f"Total samples collected: {len(self.iostat_telemetry.samples)}")
+            print_bullet(f"Total samples collected: {len(self.zpool_iostat_telemetry.samples)}")
     
-    def get_iostat_data(self):
+    def get_zpool_iostat_data(self):
         """
-        Get the collected iostat telemetry data.
+        Get the collected zpool iostat telemetry data.
         
         Returns:
-            IostatTelemetry object or None if not collected
+            ZpoolIostatTelemetry object or None if not collected
         """
-        return self.iostat_telemetry
+        return self.zpool_iostat_telemetry
     
     def cleanup(self):
         """Remove any remaining test files (safety cleanup)."""

@@ -78,10 +78,10 @@ def save_results_to_json(results, output_path, start_time, end_time):
                     }
                     pool_entry["benchmark"].append(bench_entry)
             
-            # Add iostat telemetry if available
-            if "iostat_telemetry" in pool and pool["iostat_telemetry"]:
-                iostat = pool["iostat_telemetry"]
-                pool_entry["iostat_telemetry"] = {
+            # Add zpool iostat telemetry if available
+            if "zpool_iostat_telemetry" in pool and pool["zpool_iostat_telemetry"]:
+                iostat = pool["zpool_iostat_telemetry"]
+                pool_entry["zpool_iostat_telemetry"] = {
                     "pool_name": iostat.get("pool_name"),
                     "start_time": iostat.get("start_time"),
                     "start_time_iso": iostat.get("start_time_iso"),

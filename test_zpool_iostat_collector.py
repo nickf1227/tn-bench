@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Dry-run test for the iostat collector module.
+Dry-run test for the zpool iostat collector module.
 Tests parsing logic without requiring an actual ZFS pool.
 """
 
@@ -9,13 +9,13 @@ import os
 sys.path.insert(0, '/Users/nickf/.openclaw/workspace/Projects/TN-Bench/tn-bench')
 
 
-def test_iostat_parsing():
-    """Test the iostat line parsing logic."""
-    print("Testing iostat line parsing...")
+def test_zpool_iostat_parsing():
+    """Test the zpool iostat line parsing logic."""
+    print("Testing zpool iostat line parsing...")
     
-    from core.iostat_collector import ZPoolIostatCollector
+    from core.zpool_iostat_collector import ZpoolIostatCollector
     
-    collector = ZPoolIostatCollector("tank")
+    collector = ZpoolIostatCollector("tank")
     
     # Test cases for zpool iostat output format (basic without extended stats)
     test_cases = [
@@ -57,11 +57,11 @@ def test_telemetry_structure():
     """Test the telemetry data structure."""
     print("\nTesting telemetry data structure...")
     
-    from core.iostat_collector import IostatSample, IostatTelemetry
+    from core.zpool_iostat_collector import ZpoolIostatSample, ZpoolIostatTelemetry
     import time
     
     # Create a sample
-    sample = IostatSample(
+    sample = ZpoolIostatSample(
         timestamp=time.time(),
         timestamp_iso="2024-01-01T00:00:00",
         pool_name="tank",
@@ -84,7 +84,7 @@ def test_telemetry_structure():
     )
     
     # Create telemetry
-    telemetry = IostatTelemetry(
+    telemetry = ZpoolIostatTelemetry(
         pool_name="tank",
         start_time=time.time(),
         start_time_iso="2024-01-01T00:00:00",
@@ -129,12 +129,12 @@ def test_integration():
     
     # Check that the class has the new attributes
     attrs_to_check = [
-        'collect_iostat',
-        'iostat_interval', 
-        'iostat_warmup',
-        'iostat_cooldown',
-        'iostat_collector',
-        'iostat_telemetry'
+        'collect_zpool_iostat',
+        'zpool_iostat_interval', 
+        'zpool_iostat_warmup',
+        'zpool_iostat_cooldown',
+        'zpool_iostat_collector',
+        'zpool_iostat_telemetry'
     ]
     
     all_ok = True
@@ -144,10 +144,10 @@ def test_integration():
     
     # Check that the class has the new methods
     methods = [
-        '_run_benchmark_with_iostat',
-        '_run_benchmark_without_iostat',
-        'get_iostat_data',
-        '_print_iostat_summary'
+        '_run_benchmark_with_zpool_iostat',
+        '_run_benchmark_without_zpool_iostat',
+        'get_zpool_iostat_data',
+        '_print_zpool_iostat_summary'
     ]
     
     for method in methods:
@@ -165,9 +165,9 @@ def test_collector_lifecycle():
     """Test collector initialization and state."""
     print("\nTesting collector lifecycle...")
     
-    from core.iostat_collector import ZPoolIostatCollector
+    from core.zpool_iostat_collector import ZpoolIostatCollector
     
-    collector = ZPoolIostatCollector("test_pool", interval=2, extended_stats=False)
+    collector = ZpoolIostatCollector("test_pool", interval=2, extended_stats=False)
     
     checks = [
         ("pool_name set", collector.pool_name == "test_pool"),
@@ -189,22 +189,22 @@ def test_collector_lifecycle():
 
 
 def test_results_integration():
-    """Test that results.py properly handles iostat data."""
+    """Test that results.py properly handles zpool iostat data."""
     print("\nTesting results integration...")
     
     try:
         from core.results import save_results_to_json
         print("  ✓ results module imports successfully")
         
-        # Check that the file was modified to include iostat handling
+        # Check that the file was modified to include zpool iostat handling
         import inspect
         source = inspect.getsource(save_results_to_json)
         
-        if "iostat_telemetry" in source:
-            print("  ✓ results.py handles iostat_telemetry")
+        if "zpool_iostat_telemetry" in source:
+            print("  ✓ results.py handles zpool_iostat_telemetry")
             return True
         else:
-            print("  ✗ results.py missing iostat_telemetry handling")
+            print("  ✗ results.py missing zpool_iostat_telemetry handling")
             return False
             
     except Exception as e:
@@ -215,12 +215,12 @@ def test_results_integration():
 def main():
     """Run all tests."""
     print("=" * 60)
-    print("Iostat Collector Module - Dry Run Tests")
+    print("Zpool Iostat Collector Module - Dry Run Tests")
     print("=" * 60)
     
     results = []
     
-    results.append(("Parsing", test_iostat_parsing()))
+    results.append(("Parsing", test_zpool_iostat_parsing()))
     results.append(("Telemetry Structure", test_telemetry_structure()))
     results.append(("Collector Lifecycle", test_collector_lifecycle()))
     results.append(("Integration", test_integration()))

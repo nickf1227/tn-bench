@@ -6,13 +6,13 @@ import subprocess
 import json
 from utils import print_subheader, print_info, color_text
 
-# Import iostat collector for easy access
-from core.iostat_collector import (
-    ZPoolIostatCollector,
-    IostatSample,
-    IostatTelemetry,
-    IostatCollectorWithContext,
-    calculate_iostat_summary
+# Import zpool iostat collector for easy access
+from core.zpool_iostat_collector import (
+    ZpoolIostatCollector,
+    ZpoolIostatSample,
+    ZpoolIostatTelemetry,
+    ZpoolIostatCollectorWithContext,
+    calculate_zpool_iostat_summary
 )
 
 
