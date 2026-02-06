@@ -352,7 +352,7 @@ def main():
             zfs_benchmark = ZFSPoolBenchmark(pool_name, cores, dataset_path, zfs_iterations)
             pool_bench_results = zfs_benchmark.run()
             total_bytes_written = pool_bench_results["total_bytes_written"]
-            iostat_telemetry = pool_bench_results.get("iostat_telemetry")
+            iostat_telemetry = pool_bench_results.get("zpool_iostat_telemetry")
             
             pool_end_time = time.time()
             pool_duration = pool_end_time - pool_start_time
@@ -385,7 +385,7 @@ def main():
                     pool_entry["dwpd"] = dwpd
                     pool_entry["benchmark_duration_seconds"] = pool_duration
                     if iostat_telemetry:
-                        pool_entry["iostat_telemetry"] = iostat_telemetry
+                        pool_entry["zpool_iostat_telemetry"] = iostat_telemetry
                     break
             
             zfs_benchmark.cleanup()
