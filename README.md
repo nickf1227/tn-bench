@@ -1,9 +1,39 @@
-# tn-bench v1.11
+# tn-bench v2.0
 
 ##  tn-bench is an OpenSource software script that benchmarks your system and collects various statistical information via the TrueNAS API. It creates a dataset in each of your pools during testing, consuming 20 GiB of space for each thread in your system.
 
+## 🆕 What's New in v2.0
+
+### Modular Architecture
+
+TN-Bench v2.0 has been completely refactored into a modular architecture. While the user experience remains identical to v1.x, the underlying codebase is now organized into clean, maintainable modules:
+
+```
+tn-bench/
+├── truenas-bench.py      # Main coordinator (thin UI layer)
+├── core/                 # Core functionality
+│   ├── system.py         # System/pool/disk API calls
+│   ├── dataset.py        # Dataset lifecycle management
+│   └── results.py        # JSON output handling
+├── benchmarks/           # Benchmark implementations
+│   ├── base.py           # Abstract base class for all benchmarks
+│   ├── zfs_pool.py       # ZFS pool write/read benchmark
+│   └── disk_raw.py       # Individual disk read benchmark
+└── utils/                # Common utilities
+    └── helpers.py        # Colors, formatting, print functions
+```
+
+**Benefits of this design:**
+- **Easier Maintenance**: Each component is isolated and testable
+- **Simple Extensibility**: New benchmarks can be added by inheriting from `BenchmarkBase`
+- **Clear Separation**: UI, core logic, and benchmarks are cleanly separated
+- **Reusable Components**: Core utilities can be shared across benchmarks
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed documentation on the modular design.
+
 ## Features
 
+- **Modular Architecture**: Clean separation between UI, core logic, and benchmarks
 - Collects system information using TrueNAS API.
 - Benchmarks system performance using `dd` command.
 - Provides detailed information about system, pools, and disks.
@@ -13,13 +43,14 @@
 - Drive Writes Per Day (DWPD) calculation for pool benchmarks.
 - Colorized output for better readability.
 - JSON output with structured schema for sharing results.
+- **Extensible**: Easy to add new benchmark types via the `BenchmarkBase` class
 
 
 ### Running the Script is a simple git clone
 ### Please note, this script needs to be run as `root`. 
 
    ```
-   git clone -b monolithic-version-1.07 https://github.com/nickf1227/TN-Bench.git && cd TN-Bench && python3 truenas-bench.py
+   git clone -b tn-bench-2.0 https://github.com/nickf1227/tn-bench.git && cd tn-bench && python3 truenas-bench.py
    ```
 
 
