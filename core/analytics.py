@@ -32,10 +32,11 @@ class Finding:
 class PoolAnalysis:
     """Analysis results for a single pool."""
     name: str
-    scaling_efficiency: Dict[str, float]  # write/read -> efficiency %
+    scaling_efficiency: Dict[str, float]  # write/read -> efficiency % (backward compat)
     optimal_thread_count: Dict[str, int]  # write/read -> optimal threads
     anomalies: List[Finding] = field(default_factory=list)
     grade: str = "N/A"
+    scaling_patterns: Dict[str, Dict[str, Any]] = field(default_factory=dict)  # Detailed pattern analysis
 
 
 @dataclass
@@ -67,6 +68,7 @@ class SystemAnalysis:
                 {
                     "name": pa.name,
                     "scaling_efficiency": {k: round(v, 1) for k, v in pa.scaling_efficiency.items()},
+                    "scaling_patterns": pa.scaling_patterns,
                     "optimal_thread_count": pa.optimal_thread_count,
                     "anomalies": [
                         {
@@ -121,19 +123,19 @@ class ResultAnalyzer:
         )
     
     def _analyze_pool(self, pool: Dict[str, Any]) -> PoolAnalysis:
-        """Analyze a single pool's performance."""
+        """Analyze a single pool's performance using delta-based scaling analysis."""
         name = pool.get("name", "unknown")
         benchmark = pool.get("benchmark", [])
         anomalies = []
-        
+
         if not benchmark:
             return PoolAnalysis(name=name, scaling_efficiency={}, optimal_thread_count={})
-        
+
         # Extract write and read speeds by thread count
         thread_counts = []
         write_speeds = []
         read_speeds = []
-        
+
         for b in benchmark:
             threads = b.get("threads", 0)
             avg_write = b.get("average_write_speed", 0)
@@ -141,78 +143,128 @@ class ResultAnalyzer:
             thread_counts.append(threads)
             write_speeds.append(avg_write)
             read_speeds.append(avg_read)
-        
-        # Calculate scaling efficiency
-        scaling_efficiency = {}
+
+        # Analyze scaling patterns using deltas
+        scaling_analysis = {}
         optimal_threads = {}
-        
+
         for op_name, speeds in [("write", write_speeds), ("read", read_speeds)]:
-            if len(speeds) >= 2 and thread_counts[0] > 0:
-                single_thread_speed = speeds[0]
-                max_threads = thread_counts[-1]
+            if len(speeds) >= 2:
                 max_speed = max(speeds)
                 max_idx = speeds.index(max_speed)
-
-                # For reads: Use peak efficiency (cache effects skew single-thread)
-                # For writes: Use max thread efficiency (true scaling test)
-                if op_name == "read":
-                    # Compare peak to theoretical at peak thread count
-                    peak_threads = thread_counts[max_idx]
-                    theoretical_at_peak = single_thread_speed * peak_threads
-                    efficiency = (max_speed / theoretical_at_peak * 100) if theoretical_at_peak > 0 else 0
-                else:
-                    # Write scaling: actual max / theoretical max
-                    theoretical_max = single_thread_speed * max_threads
-                    efficiency = (max_speed / theoretical_max * 100) if theoretical_max > 0 else 0
-                scaling_efficiency[op_name] = efficiency
-                
-                # Optimal thread count
                 optimal_threads[op_name] = thread_counts[max_idx]
-                
-                # Check for negative scaling (multi-thread slower than single-thread)
-                for i, speed in enumerate(speeds[1:], 1):
-                    if speed < single_thread_speed * 0.9 and thread_counts[i] > 1:
+
+                # Calculate deltas between consecutive thread counts
+                deltas = []
+                marginal_gains = []  # Speed gain per thread added
+                for i in range(1, len(speeds)):
+                    delta = speeds[i] - speeds[i-1]
+                    threads_added = thread_counts[i] - thread_counts[i-1]
+                    deltas.append({
+                        "from": thread_counts[i-1],
+                        "to": thread_counts[i],
+                        "delta": delta,
+                        "pct_change": (delta / speeds[i-1] * 100) if speeds[i-1] > 0 else 0
+                    })
+                    if threads_added > 0:
+                        marginal_gains.append(delta / threads_added)
+
+                # Analyze scaling pattern
+                positive_deltas = sum(1 for d in deltas if d["delta"] > 0)
+                negative_deltas = sum(1 for d in deltas if d["delta"] < 0)
+                total_deltas = len(deltas)
+
+                # Determine scaling pattern based on progression
+                final_speed = speeds[-1]
+                single_thread_speed = speeds[0]
+                majority_negative = negative_deltas > positive_deltas
+                any_negative = negative_deltas > 0
+
+                if majority_negative or final_speed < single_thread_speed * 0.9:
+                    pattern = "regressive"  # Overall performance degrades
+                elif positive_deltas == total_deltas:
+                    pattern = "steady_improvement"  # Every step improves
+                elif any_negative and positive_deltas > negative_deltas:
+                    pattern = "peaks_early"  # Improves then falls off (like inferno)
+                elif positive_deltas >= total_deltas * 0.5:
+                    pattern = "mixed"
+                else:
+                    pattern = "plateau"
+
+                # Calculate efficiency score based on actual gains vs thread investment
+                # (what % of thread additions produced meaningful gains)
+                meaningful_gains = sum(1 for d in deltas if d["pct_change"] > 10)  # >10% gain
+                efficiency = (meaningful_gains / total_deltas * 100) if total_deltas > 0 else 0
+
+                scaling_analysis[op_name] = {
+                    "pattern": pattern,
+                    "efficiency": efficiency,
+                    "deltas": deltas,
+                    "max_speed": max_speed,
+                    "max_speed_threads": thread_counts[max_idx],
+                    "marginal_gain_avg": sum(marginal_gains) / len(marginal_gains) if marginal_gains else 0
+                }
+
+                # Detect anomalies based on deltas
+                for delta_info in deltas:
+                    # Negative scaling detection
+                    if delta_info["delta"] < -50:  # Lost more than 50 MB/s
                         anomalies.append(Finding(
                             severity=Severity.WARNING,
-                            category="scaling",
-                            message=f"{op_name.capitalize()} performance drops at {thread_counts[i]} threads "
-                                    f"({speed:.0f} MB/s vs {single_thread_speed:.0f} MB/s single-thread)",
-                            details={
-                                "thread_count": thread_counts[i],
-                                "speed": speed,
-                                "single_thread_speed": single_thread_speed,
-                                "drop_percent": round((1 - speed/single_thread_speed) * 100, 1)
-                            },
-                            recommendation=f"Check ZFS recordsize on pool '{name}' - may cause read-modify-write cycles"
+                            category="scaling_regression",
+                            message=f"{op_name.capitalize()} regresses from {delta_info['from']} to {delta_info['to']} threads "
+                                    f"({delta_info['delta']:+.0f} MB/s, {delta_info['pct_change']:+.1f}%)",
+                            details=delta_info,
+                            recommendation=f"Severe contention detected on pool '{name}' - consider thread limiting"
                         ))
-                
-                # Check for read speed drops at high threads
-                if op_name == "read" and len(speeds) >= 3:
-                    peak_speed = max(speeds[:-1])  # Exclude last point
-                    final_speed = speeds[-1]
-                    if peak_speed > 0 and final_speed < peak_speed * 0.7:
+                    elif delta_info["delta"] < 0:
                         anomalies.append(Finding(
                             severity=Severity.INFO,
-                            category="scaling",
-                            message=f"Read speed drops {round((1 - final_speed/peak_speed) * 100)}% "
-                                    f"at maximum thread count ({final_speed:.0f} vs {peak_speed:.0f} MB/s)",
-                            details={
-                                "peak_speed": peak_speed,
-                                "final_speed": final_speed,
-                                "optimal_threads": thread_counts[speeds.index(peak_speed)]
-                            },
-                            recommendation=f"Consider limiting read threads to {thread_counts[speeds.index(peak_speed)]} for pool '{name}'"
+                            category="scaling_regression",
+                            message=f"{op_name.capitalize()} slight regression from {delta_info['from']} to {delta_info['to']} threads "
+                                    f"({delta_info['delta']:+.0f} MB/s)",
+                            details=delta_info
                         ))
-        
-        # Calculate pool grade
-        grade = self._calculate_pool_grade(scaling_efficiency, anomalies)
-        
+                    # Diminishing returns detection
+                    elif delta_info["pct_change"] < 5 and delta_info["to"] > 8:
+                        anomalies.append(Finding(
+                            severity=Severity.INFO,
+                            category="diminishing_returns",
+                            message=f"{op_name.capitalize()} shows diminishing returns at {delta_info['to']} threads "
+                                    f"(only {delta_info['pct_change']:.1f}% gain)",
+                            details=delta_info,
+                            recommendation=f"Pool '{name}' {op_name} performance plateaus around {delta_info['from']} threads"
+                        ))
+
+        # Calculate pool grade based on patterns
+        grade = self._calculate_pool_grade_v2(scaling_analysis, anomalies)
+
+        # Extract efficiency for backward compatibility
+        scaling_efficiency = {
+            op: analysis["efficiency"]
+            for op, analysis in scaling_analysis.items()
+        }
+
+        # Extract patterns for output
+        scaling_patterns = {
+            op: {
+                "pattern": analysis["pattern"],
+                "efficiency": round(analysis["efficiency"], 1),
+                "max_speed": analysis["max_speed"],
+                "max_speed_threads": analysis["max_speed_threads"],
+                "marginal_gain_avg": round(analysis["marginal_gain_avg"], 2),
+                "deltas": analysis["deltas"]
+            }
+            for op, analysis in scaling_analysis.items()
+        }
+
         return PoolAnalysis(
             name=name,
             scaling_efficiency=scaling_efficiency,
             optimal_thread_count=optimal_threads,
             anomalies=anomalies,
-            grade=grade
+            grade=grade,
+            scaling_patterns=scaling_patterns
         )
     
     def _analyze_disk_consistency(self) -> Dict[str, Any]:
@@ -318,7 +370,80 @@ class ResultAnalyzer:
             return "D"
         else:
             return "F"
-    
+
+    def _calculate_pool_grade_v2(self, scaling_analysis: Dict[str, Dict[str, Any]],
+                                  anomalies: List[Finding]) -> str:
+        """Calculate letter grade based on scaling patterns and deltas.
+
+        Focuses on:
+        - Pattern type (steady_improvement > plateau > regressive)
+        - Efficiency (how many thread steps produced gains)
+        - Presence of negative deltas
+        """
+        if not scaling_analysis:
+            return "N/A"
+
+        scores = []
+        for op_name, analysis in scaling_analysis.items():
+            pattern = analysis.get("pattern", "unknown")
+            efficiency = analysis.get("efficiency", 0)
+            marginal_gain = analysis.get("marginal_gain_avg", 0)
+
+            # Base score from pattern
+            if pattern == "steady_improvement":
+                base_score = 85  # B+ start
+            elif pattern == "peaks_early":
+                base_score = 75  # C+ start (common for ZFS, not terrible)
+            elif pattern == "mixed":
+                base_score = 70  # C start
+            elif pattern == "plateau":
+                base_score = 65  # D+ start
+            elif pattern == "regressive":
+                base_score = 50  # F start (actual degradation)
+            else:
+                base_score = 60
+
+            # Adjust by efficiency (how many steps produced >10% gains)
+            if efficiency >= 75:  # 3/4 or 4/4 steps improved
+                base_score += 10
+            elif efficiency >= 50:  # Half the steps improved
+                base_score += 5
+            elif efficiency >= 25:  # Some improvement
+                base_score += 0
+            else:  # Minimal improvement
+                base_score -= 10
+
+            # Bonus for good marginal gains (>50 MB/s per thread)
+            if marginal_gain > 100:
+                base_score += 5
+            elif marginal_gain < 0:
+                base_score -= 15
+
+            scores.append(base_score)
+
+        avg_score = sum(scores) / len(scores) if scores else 0
+
+        # Penalize for regressions
+        regression_count = sum(1 for a in anomalies
+                               if a.category == "scaling_regression" and a.severity == Severity.WARNING)
+        slight_regression_count = sum(1 for a in anomalies
+                                      if a.category == "scaling_regression" and a.severity == Severity.INFO)
+
+        avg_score -= regression_count * 15
+        avg_score -= slight_regression_count * 5
+
+        # Convert to letter
+        if avg_score >= 90:
+            return "A"
+        elif avg_score >= 80:
+            return "B"
+        elif avg_score >= 70:
+            return "C"
+        elif avg_score >= 60:
+            return "D"
+        else:
+            return "F"
+
     def _calculate_overall_grade(self) -> tuple:
         """Calculate overall system grade."""
         if not self.pool_analyses:
