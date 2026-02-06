@@ -291,18 +291,6 @@ def main():
         benchmark_results["benchmark_config"]["disk_test_mode"] = disk_test_mode
         benchmark_results["benchmark_config"]["disk_block_size"] = BLOCK_SIZES[block_size]["size"]
         benchmark_results["benchmark_config"]["disk_seek_threads"] = seek_threads
-    
-    # Ask about disk test mode and block size if running disk benchmark
-    disk_test_mode = "serial"
-    disk_block_size = "4"
-    if run_disk_bench:
-        disk_test_mode = ask_disk_test_mode()
-        disk_block_size = ask_disk_block_size()
-        benchmark_results["benchmark_config"]["disk_test_mode"] = disk_test_mode
-        benchmark_results["benchmark_config"]["disk_block_size"] = BLOCK_SIZES[disk_block_size]["description"]
-    else:
-        benchmark_results["benchmark_config"]["disk_test_mode"] = None
-        benchmark_results["benchmark_config"]["disk_block_size"] = None
 
     cores = system_info.get("cores", 1)
 
@@ -391,11 +379,18 @@ def main():
 
     # Run disk benchmark if requested
     if run_disk_bench:
+        print_header("Disk Benchmark Configuration")
+        print_info(f"Test mode: {disk_test_mode}")
+        print_info(f"Block size: {BLOCK_SIZES[block_size]['description']}")
+        if disk_test_mode == "seek_stress":
+            print_info(f"Threads per disk: {seek_threads}")
+        
         disk_benchmark = EnhancedDiskBenchmark(
             disk_info, system_info, 
             test_mode=disk_test_mode,
-            block_size=disk_block_size,
-            iterations=disk_iterations
+            block_size=block_size,
+            iterations=disk_iterations,
+            seek_threads=seek_threads
         )
         disk_bench_results = disk_benchmark.run()
         benchmark_results["disk_benchmark"] = disk_bench_results
