@@ -11,6 +11,8 @@ This script serves as the user interface and coordination layer.
 """
 
 import argparse
+import json
+import os
 import time
 
 from utils import (
@@ -23,6 +25,8 @@ from core import (
 )
 from core.dataset import create_dataset, delete_dataset, validate_space
 from core.results import save_results_to_json
+from core.analytics import ResultAnalyzer
+from core.report_generator import generate_markdown_report
 from benchmarks import ZFSPoolBenchmark, DiskBenchmark, EnhancedDiskBenchmark, BLOCK_SIZES
 
 
@@ -430,6 +434,47 @@ def main():
 
     # Save results to JSON
     save_results_to_json(benchmark_results, args.output, start_time, end_time)
+    
+    # Run analytics and generate reports
+    print_header("Analytics")
+    print_info("Running post-benchmark analytics...")
+    
+    try:
+        # Load the saved results for analysis
+        with open(args.output, 'r') as f:
+            results_for_analysis = json.load(f)
+        
+        # Run analytics
+        analyzer = ResultAnalyzer(results_for_analysis)
+        analysis = analyzer.analyze()
+        
+        # Generate analytics JSON filename
+        base_path = args.output.replace('.json', '')
+        analytics_path = f"{base_path}_analytics.json"
+        report_path = f"{base_path}_report.md"
+        
+        # Save analytics JSON
+        with open(analytics_path, 'w') as f:
+            json.dump(analysis.to_dict(), f, indent=2)
+        print_success(f"Analytics data saved to: {os.path.abspath(analytics_path)}")
+        
+        # Generate and save markdown report
+        report = generate_markdown_report(analysis.to_dict(), args.output)
+        with open(report_path, 'w') as f:
+            f.write(report)
+        print_success(f"Analytics report saved to: {os.path.abspath(report_path)}")
+        
+        # Print summary
+        print_section("Analytics Summary")
+        for pool in analysis.pool_analyses:
+            print_info(f"Pool: {pool.name}")
+            if pool.write_scaling:
+                print_bullet(f"Write peak: {pool.write_scaling.get('peak_speed_mbps', 0)} MB/s @ {pool.write_scaling.get('optimal_threads', 0)} threads")
+            if pool.read_scaling:
+                print_bullet(f"Read peak: {pool.read_scaling.get('peak_speed_mbps', 0)} MB/s @ {pool.read_scaling.get('optimal_threads', 0)} threads")
+        
+    except Exception as e:
+        print_error(f"Analytics generation failed (non-critical): {str(e)}")
 
 
 if __name__ == "__main__":
