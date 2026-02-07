@@ -42,15 +42,23 @@ except ImportError:
 # ═══════════════════════════════════════════════════════════════════════════
 
 # Fields requested from arcstat (order matters — matches output columns)
-ARCSTAT_FIELDS = [
+# Core fields always available on any ZFS system
+ARCSTAT_FIELDS_CORE = [
     "hit%", "miss%", "arcsz", "read", "hits", "miss",
     "dh%", "dm%", "ph%", "pm%",
     "mfusz%", "mrusz%", "mfu", "mru",
-    "l2hit%", "l2size", "l2bytes",
-    "zhits", "zmisses", "zissued", "zahead",
 ]
 
-ARCSTAT_FIELD_STRING = ",".join(ARCSTAT_FIELDS)
+# L2ARC fields — only available when L2ARC hardware is present;
+# arcstat rejects these outright on systems without L2ARC
+ARCSTAT_FIELDS_L2ARC = [
+    "l2hit%", "l2size", "l2bytes",
+]
+
+# ZFetch (prefetch engine) fields
+ARCSTAT_FIELDS_ZFETCH = [
+    "zhits", "zmisses", "zissued", "zahead",
+]
 
 
 # ═══════════════════════════════════════════════════════════════════════════
@@ -218,6 +226,7 @@ class ArcstatCollector:
         self.interval = interval
         self.pool_name = pool_name
         self.has_l2arc = False
+        self._fields: List[str] = []  # built dynamically based on L2ARC presence
         self.telemetry: Optional[ArcstatTelemetry] = None
         self._process: Optional[subprocess.Popen] = None
         self._thread: Optional[threading.Thread] = None
@@ -227,74 +236,107 @@ class ArcstatCollector:
         self._warmup_target = 0
         self._segment_label: str = ""
 
+    def _build_fields(self) -> List[str]:
+        """Build the field list based on L2ARC presence."""
+        fields = list(ARCSTAT_FIELDS_CORE)
+        if self.has_l2arc:
+            fields.extend(ARCSTAT_FIELDS_L2ARC)
+        fields.extend(ARCSTAT_FIELDS_ZFETCH)
+        return fields
+
     def _build_command(self) -> List[str]:
         """Build the arcstat command."""
         # -p for parseable (raw numbers, no unit suffixes)
         # -f to select fields
         # interval count=0 means run forever (we'll kill it on stop)
+        field_string = ",".join(self._fields)
         return [
             "arcstat", "-p",
-            "-f", ARCSTAT_FIELD_STRING,
+            "-f", field_string,
             str(self.interval),
         ]
+
+    def _is_header_line(self, line: str) -> bool:
+        """Check if a line is a header (contains field names, not numeric data)."""
+        # Header lines contain field name strings like "hit%", "arcsz", etc.
+        return any(field in line for field in ["hit%", "miss%", "arcsz"])
 
     def _parse_line(self, line: str) -> Optional[ArcstatSample]:
         """
         Parse a single line of arcstat -p output.
 
-        arcstat -p outputs tab/space-separated numeric values in the order
-        of the requested fields, with a header line at the start.
+        arcstat -p outputs space-separated numeric values in the order
+        of the requested fields, with periodic header lines.
         """
-        parts = line.strip().split()
-        if len(parts) < len(ARCSTAT_FIELDS):
+        stripped = line.strip()
+        if not stripped:
+            return None
+
+        # Skip header lines (arcstat reprints headers periodically)
+        if self._is_header_line(stripped):
+            return None
+
+        parts = stripped.split()
+        expected = len(self._fields)
+        if len(parts) < expected:
             return None
 
         try:
             timestamp = time.time()
-            # Map positional fields
-            vals = [float(p) for p in parts[:len(ARCSTAT_FIELDS)]]
+            vals = [float(p) for p in parts[:expected]]
+
+            # Map positional fields — core fields are always at indices 0-13
+            # L2ARC fields (if present) follow, then zfetch fields
+            idx = 14  # after core fields
+
+            if self.has_l2arc:
+                l2_hit_pct = vals[idx]
+                l2_size_gib = _bytes_to_gib(vals[idx + 1])
+                l2_bytes_mbs = _bytes_to_mbs(vals[idx + 2])
+                idx += 3
+            else:
+                l2_hit_pct = 0.0
+                l2_size_gib = 0.0
+                l2_bytes_mbs = 0.0
 
             return ArcstatSample(
                 timestamp=timestamp,
                 timestamp_iso=datetime.fromtimestamp(timestamp).isoformat(),
-                # Core
+                # Core (always indices 0-13)
                 arc_hit_pct=vals[0],
                 arc_miss_pct=vals[1],
                 arc_size_gib=_bytes_to_gib(vals[2]),
                 reads_per_sec=vals[3],
                 hits_per_sec=vals[4],
                 misses_per_sec=vals[5],
-                # Demand
                 demand_hit_pct=vals[6],
                 demand_miss_pct=vals[7],
-                # Prefetch
                 prefetch_hit_pct=vals[8],
                 prefetch_miss_pct=vals[9],
-                # MRU/MFU
                 mfu_size_pct=vals[10],
                 mru_size_pct=vals[11],
                 mfu_hits_per_sec=vals[12],
                 mru_hits_per_sec=vals[13],
-                # L2ARC
-                l2_hit_pct=vals[14],
-                l2_size_gib=_bytes_to_gib(vals[15]),
-                l2_bytes_per_sec_mbs=_bytes_to_mbs(vals[16]),
-                # ZFetch
-                zfetch_hits_per_sec=vals[17],
-                zfetch_misses_per_sec=vals[18],
-                zfetch_issued_per_sec=vals[19],
-                zfetch_ahead_per_sec=vals[20],
+                # L2ARC (dynamic position or zeroed)
+                l2_hit_pct=l2_hit_pct,
+                l2_size_gib=l2_size_gib,
+                l2_bytes_per_sec_mbs=l2_bytes_mbs,
+                # ZFetch (after L2ARC or immediately after core)
+                zfetch_hits_per_sec=vals[idx],
+                zfetch_misses_per_sec=vals[idx + 1],
+                zfetch_issued_per_sec=vals[idx + 2],
+                zfetch_ahead_per_sec=vals[idx + 3],
                 # Phase
                 segment_label=self._segment_label,
             )
         except (ValueError, IndexError) as e:
-            print_warning(f"Failed to parse arcstat line: {line.strip()} - {e}")
+            print_warning(f"Failed to parse arcstat line: {stripped} - {e}")
             return None
 
     def _collection_loop(self):
         """Main collection loop running in background thread."""
         cmd = self._build_command()
-        print_info(f"Starting arcstat collection (interval: {self.interval}s, fields: {len(ARCSTAT_FIELDS)})")
+        print_info(f"Starting arcstat collection (interval: {self.interval}s, fields: {len(self._fields)})")
 
         try:
             self._process = subprocess.Popen(
@@ -306,8 +348,6 @@ class ArcstatCollector:
                 universal_newlines=True,
             )
 
-            header_skipped = False
-
             while not self._stop_event.is_set() and self._process.poll() is None:
                 try:
                     line = self._process.stdout.readline()
@@ -315,19 +355,7 @@ class ArcstatCollector:
                         time.sleep(0.1)
                         continue
 
-                    line = line.strip()
-                    if not line:
-                        continue
-
-                    # Skip the header line (field names)
-                    if not header_skipped:
-                        # Header contains field names like "hit%" — skip it
-                        if any(f in line for f in ["hit%", "miss%", "arcsz"]):
-                            header_skipped = True
-                            continue
-                        # If it doesn't look like a header, try parsing anyway
-                        # (some arcstat versions may not print a header with -p)
-
+                    # _parse_line handles header detection and skipping
                     sample = self._parse_line(line)
                     if sample and self.telemetry:
                         # Track warmup
@@ -386,6 +414,9 @@ class ArcstatCollector:
                 print_info(f"L2ARC detected on pool '{self.pool_name}' — L2ARC metrics will be reported")
             else:
                 print_info(f"No L2ARC on pool '{self.pool_name}' — L2ARC metrics will be omitted")
+
+        # Build field list after L2ARC detection (L2 fields crash arcstat on systems without L2ARC)
+        self._fields = self._build_fields()
 
         start_time = time.time()
         self.telemetry = ArcstatTelemetry(
