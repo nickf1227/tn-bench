@@ -103,6 +103,10 @@ def color_text(text: str, color: str) -> str:
         "YELLOW": "\033[93m",
         "RED": "\033[91m",
         "BOLD": "\033[1m",
+        "DIM": "\033[2m",
+        "WHITE": "\033[97m",
+        "BLUE": "\033[94m",
+        "MAGENTA": "\033[95m",
         "RESET": "\033[0m"
     }
     return f"{colors.get(color, '')}{text}{colors['RESET']}"
@@ -274,7 +278,7 @@ class TelemetryFormatter:
             self._add()
 
     def _format_metric_row(self, metric_name: str, stats: Dict[str, Any]):
-        """Format a single metric row with Mean, Median, P99, Std Dev, CV% and ratings."""
+        """Format a single metric row as a readable table with colorized labels and values."""
         if not stats:
             return
         
@@ -293,15 +297,39 @@ class TelemetryFormatter:
         std_rating, std_color = get_std_dev_rating(std_dev, metric_type)
         
         if self.config.format == OutputFormat.CONSOLE:
-            # Colorized ratings for console
-            cv_colored = color_text(cv_rating, cv_color)
-            p99_colored = color_text(p99_rating, p99_color)
-            std_colored = color_text(std_rating, std_color)
+            # Colorized output: labels in cyan, values in yellow/magenta, ratings colored by rating
+            dim = "DIM"
+            label_color = "CYAN"      # Metric labels
+            value_color = "WHITE"     # Numeric values
+            unit_color = "DIM"        # Units like (MB/s)
             
-            # Compact format for console with ratings
-            self._add(f"    {metric_name:<20}")
-            self._add(f"      Mean={mean:>10.1f}  Median={median:>10.1f}  P99={p99:>10.1f} [{p99_colored}]")
-            self._add(f"      Std={std_dev:>10.1f} [{std_colored}]  CV={cv:>6.1f}% [{cv_colored}]")
+            # Build the table line with separator
+            sep = color_text("│", dim)
+            
+            # Metric name as header
+            metric_header = color_text(f"  ┌─ {metric_name} ", label_color) + color_text("─" * (56 - len(metric_name)), dim)
+            self._add(metric_header)
+            
+            # Row 1: Mean, Median, P99
+            mean_str = color_text(f"{mean:,.1f}", value_color)
+            median_str = color_text(f"{median:,.1f}", value_color)
+            p99_val_str = color_text(f"{p99:,.1f}", value_color)
+            p99_rating_str = color_text(p99_rating, p99_color)
+            
+            self._add(f"  {sep} {color_text('Mean:', label_color):<8} {mean_str:>12}  {sep} {color_text('Median:', label_color):<8} {median_str:>12}  {sep}")
+            self._add(f"  {sep} {color_text('P99:', label_color):<8} {p99_val_str:>12} {color_text('[' + p99_rating + ']', p99_color):>14} {sep}")
+            
+            # Row 2: Std Dev, CV%
+            std_str = color_text(f"{std_dev:,.1f}", value_color)
+            std_rating_str = color_text(std_rating, std_color)
+            cv_str = color_text(f"{cv:.1f}", value_color)
+            cv_rating_str = color_text(cv_rating, cv_color)
+            
+            self._add(f"  {sep} {color_text('Std Dev:', label_color):<8} {std_str:>12} {color_text('[' + std_rating + ']', std_color):>14} {sep}")
+            self._add(f"  {sep} {color_text('CV%:', label_color):<8} {cv_str:>12}% {cv_rating_str:>14} {sep}")
+            
+            # Bottom border
+            self._add(color_text("  └" + "─" * 58 + "┘", dim))
         else:
             # Markdown table format with ratings
             self._add(f"| Metric | Mean | Median | P99 (Rating) | Std Dev (Rating) | CV% (Rating) |")
