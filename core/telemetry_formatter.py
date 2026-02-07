@@ -297,35 +297,44 @@ class TelemetryFormatter:
         std_rating, std_color = get_std_dev_rating(std_dev, metric_type)
         
         if self.config.format == OutputFormat.CONSOLE:
-            # Colorized output: labels in cyan, values in yellow/magenta, ratings colored by rating
+            # Colorized output: labels in cyan, values in white, ratings colored by rating
             dim = "DIM"
             label_color = "CYAN"      # Metric labels
             value_color = "WHITE"     # Numeric values
-            unit_color = "DIM"        # Units like (MB/s)
             
-            # Build the table line with separator
+            # Build the table with box drawing characters
             sep = color_text("│", dim)
+            row_sep = color_text("├" + "─" * 58 + "┤", dim)
             
             # Metric name as header
             metric_header = color_text(f"  ┌─ {metric_name} ", label_color) + color_text("─" * (56 - len(metric_name)), dim)
             self._add(metric_header)
             
-            # Row 1: Mean, Median, P99
+            # Row 1: Mean, Median
             mean_str = color_text(f"{mean:,.1f}", value_color)
             median_str = color_text(f"{median:,.1f}", value_color)
-            p99_val_str = color_text(f"{p99:,.1f}", value_color)
-            p99_rating_str = color_text(p99_rating, p99_color)
-            
             self._add(f"  {sep} {color_text('Mean:', label_color):<8} {mean_str:>12}  {sep} {color_text('Median:', label_color):<8} {median_str:>12}  {sep}")
+            
+            # Separator line
+            self._add(f"  {row_sep}")
+            
+            # Row 2: P99 with rating
+            p99_val_str = color_text(f"{p99:,.1f}", value_color)
             self._add(f"  {sep} {color_text('P99:', label_color):<8} {p99_val_str:>12} {color_text('[' + p99_rating + ']', p99_color):>14} {sep}")
             
-            # Row 2: Std Dev, CV%
+            # Separator line
+            self._add(f"  {row_sep}")
+            
+            # Row 3: Std Dev with rating
             std_str = color_text(f"{std_dev:,.1f}", value_color)
-            std_rating_str = color_text(std_rating, std_color)
+            self._add(f"  {sep} {color_text('Std Dev:', label_color):<8} {std_str:>12} {color_text('[' + std_rating + ']', std_color):>14} {sep}")
+            
+            # Separator line
+            self._add(f"  {row_sep}")
+            
+            # Row 4: CV% with rating
             cv_str = color_text(f"{cv:.1f}", value_color)
             cv_rating_str = color_text(cv_rating, cv_color)
-            
-            self._add(f"  {sep} {color_text('Std Dev:', label_color):<8} {std_str:>12} {color_text('[' + std_rating + ']', std_color):>14} {sep}")
             self._add(f"  {sep} {color_text('CV%:', label_color):<8} {cv_str:>12}% {cv_rating_str:>14} {sep}")
             
             # Bottom border
