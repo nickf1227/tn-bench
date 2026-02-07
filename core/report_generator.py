@@ -294,11 +294,15 @@ def _format_telemetry_section(ta: Dict[str, Any]) -> List[str]:
     lines.append(f"## Telemetry: {pool_name}")
     lines.append("")
 
-    # ── Phase Analysis (PRIMARY) ──
-    # Show per-phase steady-state analysis first as the main results
+    # ── Per-Phase Steady-State Analysis (PRIMARY) ──
+    # Only show WRITE metrics to avoid ZFS ARC confusion
     phase_stats = ta.get("phase_stats", [])
     if phase_stats:
         lines.extend(_format_phase_section(phase_stats))
+
+    # ── Per-Phase Latency (secondary) ──
+    if phase_stats:
+        lines.extend(_format_phase_latency_section(phase_stats))
 
     # ── Sample Summary ──
     summary = ta.get("sample_summary", {})
@@ -345,41 +349,6 @@ def _format_telemetry_section(ta: Dict[str, Any]) -> List[str]:
         lines.append(f"| End | {cap.get('end', 0):.2f} |")
         lines.append(f"| Peak | {cap.get('max', 0):.2f} |")
         lines.append(f"| Min | {cap.get('min', 0):.2f} |")
-        lines.append("")
-
-    # ── Detailed Aggregate Statistics (collapsible/secondary) ──
-    lines.append("### Detailed Aggregate Statistics")
-    lines.append("")
-    lines.append("*Complete statistics across all samples for reference. See Per-Phase Analysis above for steady-state metrics.*")
-    lines.append("")
-
-    # ── IOPS ──
-    iops = ta.get("iops", {})
-    if iops:
-        lines.extend(_format_iops_section(iops))
-
-    # ── Bandwidth ──
-    bw = ta.get("bandwidth_mbps", {})
-    if bw:
-        lines.extend(_format_bandwidth_section(bw))
-
-    # ── Latency ──
-    lat = ta.get("latency_ms", {})
-    if lat:
-        lines.extend(_format_latency_section(lat))
-
-    # ── Queue Depths ──
-    qd = ta.get("queue_depths", {})
-    if qd:
-        lines.extend(_format_queue_section(qd))
-
-    # ── Observations ──
-    observations = ta.get("observations", [])
-    if observations:
-        lines.append("### Telemetry Observations")
-        lines.append("")
-        for obs in observations:
-            lines.append(f"- **{obs.get('category', '')}:** {obs.get('description', '')}")
         lines.append("")
 
     return lines
@@ -558,11 +527,11 @@ def _format_io_size_section(io_size: Dict[str, Any]) -> List[str]:
 
 
 def _format_phase_section(phase_stats: List[Dict[str, Any]]) -> List[str]:
-    """Format phase detection results as the primary steady-state analysis."""
+    """Format phase detection results - WRITE metrics only to avoid ZFS ARC confusion."""
     lines = []
     lines.append("### Per-Thread-Count Steady-State Analysis")
     lines.append("")
-    lines.append("Consistent performance analysis per detected benchmark phase.")
+    lines.append("WRITE telemetry only (READ excluded due to ZFS ARC cache interference).")
     lines.append("")
 
     # Filter to active phases with sufficient samples
@@ -576,92 +545,32 @@ def _format_phase_section(phase_stats: List[Dict[str, Any]]) -> List[str]:
         lines.append("")
         return lines
 
-    # Group phases by dominant operation type and sort by thread count inference
-    # For now, we'll label them sequentially as detected
+    # Display each phase with WRITE metrics only
     for i, ps in enumerate(active_phases, 1):
         phase_name = ps.get("phase", "unknown").upper()
         dur = ps.get("duration_samples", 0)
         label = ps.get("label", f"Phase-{i}")
 
-        # Create phase label with thread count if available
-        if label:
-            lines.append(f"#### {label} ({dur} samples)")
-        else:
-            lines.append(f"#### Phase {i}: {phase_name} ({dur} samples)")
-        lines.append("")
-
-        # Build unified table with all metrics
-        lines.append("| Metric | Operation | Mean | P99 | Std Dev | CV% | Rating |")
-        lines.append("|--------|-----------|------:|-----:|--------:|-----:|--------|")
-
-        # Write metrics
+        # Get write metrics
         w_iops = ps.get("write_iops", {})
         w_bw = ps.get("write_bandwidth_mbps", {})
-        w_lat = ps.get("write_latency_ms", {})
 
-        if w_iops.get("count", 0) > 0:
-            cv = w_iops.get("cv_percent", 0)
-            rating = _cv_rating(cv)
-            lines.append(
-                f"| IOPS | Write | {w_iops['mean']:,.0f} | {w_iops['p99']:,.0f} | "
-                f"{w_iops['std_dev']:,.0f} | {cv:.1f}% | {rating} |"
-            )
-        if w_bw.get("count", 0) > 0:
-            cv = w_bw.get("cv_percent", 0)
-            rating = _cv_rating(cv)
-            lines.append(
-                f"| Bandwidth (MB/s) | Write | {w_bw['mean']:,.1f} | {w_bw['p99']:,.1f} | "
-                f"{w_bw['std_dev']:,.1f} | {cv:.1f}% | {rating} |"
-            )
-        if w_lat.get("count", 0) > 0:
-            cv = w_lat.get("cv_percent", 0)
-            rating = _cv_rating(cv)
-            lines.append(
-                f"| Latency (ms) | Write | {w_lat['mean']:.2f} | {w_lat['p99']:.2f} | "
-                f"{w_lat['std_dev']:.2f} | {cv:.1f}% | {rating} |"
-            )
+        # Only show phases with actual write activity
+        if w_iops.get("count", 0) == 0 or w_iops.get("mean", 0) < 100:
+            continue
 
-        # Read metrics
-        r_iops = ps.get("read_iops", {})
-        r_bw = ps.get("read_bandwidth_mbps", {})
-        r_lat = ps.get("read_latency_ms", {})
+        # Format the summary line
+        iops_mean = w_iops.get("mean", 0)
+        iops_cv = w_iops.get("cv_percent", 0)
+        bw_mean = w_bw.get("mean", 0) if w_bw.get("count", 0) > 0 else 0
+        rating = _cv_rating(iops_cv)
 
-        if r_iops.get("count", 0) > 0:
-            cv = r_iops.get("cv_percent", 0)
-            rating = _cv_rating(cv)
-            lines.append(
-                f"| IOPS | Read | {r_iops['mean']:,.0f} | {r_iops['p99']:,.0f} | "
-                f"{r_iops['std_dev']:,.0f} | {cv:.1f}% | {rating} |"
-            )
-        if r_bw.get("count", 0) > 0:
-            cv = r_bw.get("cv_percent", 0)
-            rating = _cv_rating(cv)
-            lines.append(
-                f"| Bandwidth (MB/s) | Read | {r_bw['mean']:,.1f} | {r_bw['p99']:,.1f} | "
-                f"{r_bw['std_dev']:,.1f} | {cv:.1f}% | {rating} |"
-            )
-        if r_lat.get("count", 0) > 0:
-            cv = r_lat.get("cv_percent", 0)
-            rating = _cv_rating(cv)
-            lines.append(
-                f"| Latency (ms) | Read | {r_lat['mean']:.2f} | {r_lat['p99']:.2f} | "
-                f"{r_lat['std_dev']:.2f} | {cv:.1f}% | {rating} |"
-            )
+        # Use label if available, otherwise phase name
+        display_label = label if label else f"{phase_name}-{i}"
 
+        lines.append(f"{display_label} ({dur} samples):")
+        lines.append(f"  Write: {iops_mean:,.0f} IOPS ({bw_mean:,.0f} MB/s) CV={iops_cv:5.1f}% [{rating}]")
         lines.append("")
-
-    # Add phase timeline summary
-    lines.append("#### Phase Timeline Summary")
-    lines.append("")
-    lines.append("| # | Phase | Samples | Start | End |")
-    lines.append("|---|-------|--------:|-------|-----|")
-    for i, ps in enumerate(phase_stats, 1):
-        phase = ps.get("phase", "?").upper()
-        dur = ps.get("duration_samples", 0)
-        start = _truncate_timestamp(ps.get("start_time", ""))
-        end = _truncate_timestamp(ps.get("end_time", ""))
-        lines.append(f"| {i} | {phase} | {dur} | {start} | {end} |")
-    lines.append("")
 
     return lines
 
@@ -676,6 +585,45 @@ def _cv_rating(cv: float) -> str:
         return "~ Variable"
     else:
         return "⚠ High Variance"
+
+
+def _format_phase_latency_section(phase_stats: List[Dict[str, Any]]) -> List[str]:
+    """Format per-phase latency analysis."""
+    lines = []
+    lines.append("### Latency (ms)")
+    lines.append("")
+    lines.append("Per-phase write latency analysis.")
+    lines.append("")
+    lines.append("| Phase | Samples | Mean | P99 | Std Dev | CV% | Rating |")
+    lines.append("|-------|--------:|-----:|----:|--------:|-----:|--------|")
+
+    # Filter to active phases with write latency data
+    active_phases = [
+        ps for ps in phase_stats
+        if ps.get("phase") != "idle" and ps.get("duration_samples", 0) >= 3
+    ]
+
+    for ps in active_phases:
+        label = ps.get("label", ps.get("phase", "unknown").upper())
+        dur = ps.get("duration_samples", 0)
+        w_lat = ps.get("write_latency_ms", {})
+
+        if w_lat.get("count", 0) == 0:
+            continue
+
+        mean_val = w_lat.get("mean", 0)
+        p99_val = w_lat.get("p99", 0)
+        std_val = w_lat.get("std_dev", 0)
+        cv = w_lat.get("cv_percent", 0)
+        rating = _cv_rating(cv)
+
+        lines.append(
+            f"| {label} | {dur} | {mean_val:.2f} | {p99_val:.2f} | "
+            f"{std_val:.2f} | {cv:.1f}% | {rating} |"
+        )
+
+    lines.append("")
+    return lines
 
 
 def _format_anomaly_section(anomalies: List[Dict[str, Any]], count: int) -> List[str]:
