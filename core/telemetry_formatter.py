@@ -230,9 +230,19 @@ class TelemetryFormatter:
             self._note("WRITE telemetry only - READ metrics excluded due to ZFS ARC cache interference, "
                       "which can artificially inflate read performance numbers.")
 
-        # Only show write phases, sorted by thread count
+        # Only show write phases, sorted numerically by thread count
         write_phases = [(label, data) for label, data in per_seg.items() if label.endswith('-write')]
-        for seg_label, seg_data in sorted(write_phases):
+
+        # Extract thread count and sort numerically
+        def get_thread_count(item):
+            label = item[0]
+            # Extract number from "16T-write" format
+            try:
+                return int(label.split('T')[0])
+            except (ValueError, IndexError):
+                return 0
+
+        for seg_label, seg_data in sorted(write_phases, key=get_thread_count):
             self._format_segment(seg_label, seg_data)
 
         self._add()
@@ -240,28 +250,35 @@ class TelemetryFormatter:
     def _format_segment(self, seg_label: str, seg_data: Dict[str, Any]):
         """Format a single segment (one thread count) with full stats."""
         cnt = seg_data.get('sample_count', 0)
-
+        
         # Get IOPS, bandwidth, and latency data
         iops_data = seg_data.get('iops', {})
         write_iops = iops_data.get('write_all', {})
-
+        
         bw_data = seg_data.get('bandwidth_mbps', {})
         write_bw = bw_data.get('write_all', {})
-
+        
         # Get latency from the segment data if available
         latency_data = seg_data.get('latency_ms', {})
         write_latency = latency_data.get('total_wait_write', {})
-
-        # Only show if we have meaningful write data
-        if not write_iops or write_iops.get('mean', 0) < 100:
+        
+        # Convert "16T-write" to "16 Threads" format for display
+        try:
+            thread_count = int(seg_label.split('T')[0])
+            display_label = f"{thread_count} Threads"
+        except (ValueError, IndexError):
+            display_label = seg_label
+        
+        # Only show if we have meaningful write data (lower threshold for 1T)
+        if not write_iops or write_iops.get('mean', 0) < 10:
             return
-
+        
         # Format the segment header
         if self.config.format == OutputFormat.CONSOLE:
-            bold_label = color_text(seg_label, "BOLD")
+            bold_label = color_text(display_label, "BOLD")
             self._add(f"  {bold_label} ({cnt} samples):")
         else:
-            self._add(f"**{seg_label}** ({cnt} samples):")
+            self._add(f"**{display_label}** ({cnt} samples):")
             self._add()
 
         # Format IOPS stats with full detail
@@ -281,62 +298,62 @@ class TelemetryFormatter:
         """Format a single metric row as a readable table with colorized labels and values."""
         if not stats:
             return
-        
+
         mean = stats.get('mean', 0)
         median = stats.get('median', 0)
         p99 = stats.get('p99', 0)
         std_dev = stats.get('std_dev', 0)
         cv = stats.get('cv_percent', 0)
-        
+
         # Get ratings for each metric
         cv_rating, cv_color = get_cv_rating(cv)
         p99_rating, p99_color = get_p99_rating(p99)
-        
+
         # Determine metric type for std dev rating
         metric_type = "latency" if "ms" in metric_name.lower() or "latency" in metric_name.lower() else "iops"
         std_rating, std_color = get_std_dev_rating(std_dev, metric_type)
-        
+
         if self.config.format == OutputFormat.CONSOLE:
             # Colorized output: labels in cyan, values in white, ratings colored by rating
             dim = "DIM"
             label_color = "CYAN"      # Metric labels
             value_color = "WHITE"     # Numeric values
-            
+
             # Build the table with box drawing characters
             sep = color_text("│", dim)
             row_sep = color_text("├" + "─" * 58 + "┤", dim)
-            
+
             # Metric name as header
             metric_header = color_text(f"  ┌─ {metric_name} ", label_color) + color_text("─" * (56 - len(metric_name)), dim)
             self._add(metric_header)
-            
+
             # Row 1: Mean, Median
             mean_str = color_text(f"{mean:,.1f}", value_color)
             median_str = color_text(f"{median:,.1f}", value_color)
             self._add(f"  {sep} {color_text('Mean:', label_color):<8} {mean_str:>12}  {sep} {color_text('Median:', label_color):<8} {median_str:>12}  {sep}")
-            
+
             # Separator line
             self._add(f"  {row_sep}")
-            
+
             # Row 2: P99 with rating
             p99_val_str = color_text(f"{p99:,.1f}", value_color)
             self._add(f"  {sep} {color_text('P99:', label_color):<8} {p99_val_str:>12} {color_text('[' + p99_rating + ']', p99_color):>14} {sep}")
-            
+
             # Separator line
             self._add(f"  {row_sep}")
-            
+
             # Row 3: Std Dev with rating
             std_str = color_text(f"{std_dev:,.1f}", value_color)
             self._add(f"  {sep} {color_text('Std Dev:', label_color):<8} {std_str:>12} {color_text('[' + std_rating + ']', std_color):>14} {sep}")
-            
+
             # Separator line
             self._add(f"  {row_sep}")
-            
+
             # Row 4: CV% with rating
             cv_str = color_text(f"{cv:.1f}", value_color)
             cv_rating_str = color_text(cv_rating, cv_color)
             self._add(f"  {sep} {color_text('CV%:', label_color):<8} {cv_str:>12}% {cv_rating_str:>14} {sep}")
-            
+
             # Bottom border
             self._add(color_text("  └" + "─" * 58 + "┘", dim))
         else:
