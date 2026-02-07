@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-TN-Bench v2.0 - TrueNAS System Benchmark
+tn-bench v2.0 - TrueNAS System Benchmark
 
 Modular architecture with core functionality split into:
 - utils: Common utilities and formatting
@@ -33,13 +33,13 @@ from benchmarks import ZFSPoolBenchmark, EnhancedDiskBenchmark, BLOCK_SIZES
 
 def get_user_confirmation():
     """Display welcome message and get user confirmation to proceed."""
-    print_header("TN-Bench v2.1 (Modular)")
-    print(color_text("TN-Bench is an OpenSource Software Script that uses standard tools to", "BOLD"))
+    print_header("tn-bench v2.1 (Modular)")
+    print(color_text("tn-bench is an OpenSource Software Script that uses standard tools to", "BOLD"))
     print(color_text("Benchmark your System and collect various statistical information via", "BOLD"))
     print(color_text("the TrueNAS API.", "BOLD"))
     print()
     
-    print_info("TN-Bench will create a Dataset in each of your pools for testing purposes")
+    print_info("tn-bench will create a Dataset in each of your pools for testing purposes")
     print_info("that will consume 20 GiB of space for every thread in your system.")
     print()
     
@@ -53,7 +53,7 @@ def get_user_confirmation():
     print_section("Confirmation")
     continue_benchmark = input(color_text("Would you like to continue? (yes/no): ", "BOLD"))
     if continue_benchmark.lower() != 'yes':
-        print_info("Exiting TN-Bench.")
+        print_info("Exiting tn-bench.")
         exit(0)
 
 
@@ -235,7 +235,7 @@ def calculate_dwpd(total_writes_gib, pool_capacity_gib, test_duration_seconds):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='TN-Bench System Benchmark')
+    parser = argparse.ArgumentParser(description='tn-bench System Benchmark')
     parser.add_argument('--output', type=str, default='./tn_bench_results.json',
                         help='Path to output JSON file (default: ./tn_bench_results.json)')
     args = parser.parse_args()

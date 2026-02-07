@@ -1,5 +1,5 @@
 """
-TN-Bench Utilities
+tn-bench Utilities
 Common utilities for formatting, colors, and helper functions.
 """
 

@@ -1,7 +1,7 @@
-# TN-Bench 2.1 - Modular Architecture
+# tn-bench 2.1 - Modular Architecture
 
 ## Overview
-TN-Bench uses a modular architecture with clean separation between UI, core functionality, and benchmark implementations. Version 2.1 adds analytics and zpool iostat telemetry collection.
+tn-bench uses a modular architecture with clean separation between UI, core functionality, and benchmark implementations. Version 2.1 adds analytics and zpool iostat telemetry collection.
 
 ## Directory Structure
 

@@ -1,5 +1,5 @@
 """
-Dataset management for TN-Bench.
+Dataset management for tn-bench.
 Handles creation, deletion, and space validation of test datasets.
 """
 

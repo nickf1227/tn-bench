@@ -1,5 +1,5 @@
 """
-Base class for TN-Bench benchmarks.
+Base class for tn-bench benchmarks.
 All benchmarks must inherit from this class.
 """
 
@@ -7,7 +7,7 @@ from abc import ABC, abstractmethod
 
 
 class BenchmarkBase(ABC):
-    """Abstract base class for all TN-Bench benchmarks."""
+    """Abstract base class for all tn-bench benchmarks."""
     
     name: str = ""
     description: str = ""

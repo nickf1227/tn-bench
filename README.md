@@ -38,7 +38,7 @@
 
 ### Modular Architecture
 
-TN-Bench v2.0 has been completely refactored into a modular architecture. While the user experience remains identical to v1.x, the underlying codebase is now organized into clean, maintainable modules:
+tn-bench v2.0 has been completely refactored into a modular architecture. While the user experience remains identical to v1.x, the underlying codebase is now organized into clean, maintainable modules:
 
 ```
 tn-bench/
@@ -118,7 +118,7 @@ Example of `arcstat -f time,hit%,dh%,ph%,mh% 10` running while the benchmark is 
 
 ### Enhanced Disk Benchmark (v2.0)
 
-TN-Bench v2.0 introduces an enhanced disk benchmark with multiple test modes and configurable block sizes:
+tn-bench v2.0 introduces an enhanced disk benchmark with multiple test modes and configurable block sizes:
 
 **Test Modes:**
 - **SERIAL** (default): Test disks one at a time
@@ -151,7 +151,7 @@ TN-Bench v2.0 introduces an enhanced disk benchmark with multiple test modes and
 
 ### ARC Behavior
 
-- ARC hit rate decreases as working set exceeds cache size, which TN-Bench intentionally causes.
+- ARC hit rate decreases as working set exceeds cache size, which tn-bench intentionally causes.
 - Results reflect mixed cache hit/miss scenarios, not neccesarily indicative of a real world workload.
 
 ### Resource Requirements
@@ -207,7 +207,7 @@ Delete testing dataset fire/tn-bench? (yes/no): yes
 
 `python3 truenas-bench.py [--output /root/my_results.json]`
 
-TN-Bench generates three files for each benchmark run:
+tn-bench generates three files for each benchmark run:
 
 | File | Suffix | Description |
 |------|--------|-------------|
@@ -227,7 +227,7 @@ Generates:
 
 ## Analytics (v2.1+)
 
-TN-Bench automatically analyzes benchmark results to identify scaling patterns and performance characteristics:
+tn-bench automatically analyzes benchmark results to identify scaling patterns and performance characteristics:
 
 ### What's Analyzed
 - **Thread scaling**: How performance changes as thread count increases
@@ -274,7 +274,7 @@ The analytics engine uses neutral data presentation — it reports what it obser
 
 ## Live Telemetry Output (v2.1+)
 
-During benchmark execution, TN-Bench collects zpool iostat telemetry and displays detailed per-thread performance statistics in real-time:
+During benchmark execution, tn-bench collects zpool iostat telemetry and displays detailed per-thread performance statistics in real-time:
 
 ### Example Telemetry Summary (M50 TrueNAS)
 
@@ -352,7 +352,7 @@ During benchmark execution, TN-Bench collects zpool iostat telemetry and display
 - **Bandwidth (MB/s)**: Throughput with spread analysis
 - **Latency (ms)**: Response time statistics (P99-rated by speed thresholds)
 
-**Why READ telemetry is excluded**: ZFS ARC cache artificially inflates read performance numbers, making them misleading. TN-Bench reports WRITE telemetry only for accurate pool performance visibility.
+**Why READ telemetry is excluded**: ZFS ARC cache artificially inflates read performance numbers, making them misleading. tn-bench reports WRITE telemetry only for accurate pool performance visibility.
 
 **Color Coding** (console output):
 - **Green**: Excellent ratings
@@ -440,14 +440,14 @@ During benchmark execution, TN-Bench collects zpool iostat telemetry and display
 ```
 
 ############################################################
-#                      TN-Bench v1.11                      #
+#                      tn-bench v1.11                      #
 ############################################################
 
-TN-Bench is an OpenSource Software Script that uses standard tools to
+tn-bench is an OpenSource Software Script that uses standard tools to
 Benchmark your System and collect various statistical information via
 the TrueNAS API.
 
-* TN-Bench will create a Dataset in each of your pools for testing purposes
+* tn-bench will create a Dataset in each of your pools for testing purposes
 * that will consume 20 GiB of space for every thread in your system.
 
 ! WARNING: This test will make your system EXTREMELY slow during its run.

@@ -1,5 +1,5 @@
 """
-ZPool Iostat Collector for TN-Bench.
+ZPool Iostat Collector for tn-bench.
 
 Collects zpool iostat telemetry during pool benchmarks.
 Runs in background thread, capturing performance metrics.

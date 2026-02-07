@@ -1,6 +1,6 @@
 """
-TN-Bench Analytics Module - Neutral Data Presentation
-Part of TN-Bench 2.1
+tn-bench Analytics Module - Neutral Data Presentation
+Part of tn-bench 2.1
 
 Includes:
   - ResultAnalyzer: scaling analysis (thread efficiency, deltas, etc.)
@@ -314,7 +314,7 @@ def compute_stats(values: List[float]) -> TelemetryStats:
 class TelemetryAnalyzer:
     """Analyzes zpool iostat telemetry data.
 
-    Handles both the native TN-Bench telemetry format (string-encoded
+    Handles both the native tn-bench telemetry format (string-encoded
     bandwidth/latency with unit suffixes from ZpoolIostatCollector) and
     a simplified numeric format.
 
@@ -1048,7 +1048,7 @@ class TelemetryAnalyzer:
 # ══════════════════════════════════════════════════════════════
 
 class ResultAnalyzer:
-    """Analyzes TN-Bench results with neutral data presentation."""
+    """Analyzes tn-bench results with neutral data presentation."""
 
     def __init__(self, results: Dict[str, Any]):
         self.results = results
@@ -1245,7 +1245,7 @@ class ResultAnalyzer:
 # ══════════════════════════════════════════════════════════════
 
 def analyze_results_file(filepath: str) -> Optional[SystemAnalysis]:
-    """Analyze a TN-Bench results JSON file (scaling + telemetry)."""
+    """Analyze a tn-bench results JSON file (scaling + telemetry)."""
     try:
         with open(filepath, 'r') as f:
             results = json.load(f)
@@ -1258,7 +1258,7 @@ def analyze_results_file(filepath: str) -> Optional[SystemAnalysis]:
 
 
 def analyze_telemetry_only(filepath: str) -> Optional[List[TelemetryPoolAnalysis]]:
-    """Analyze only the telemetry data from a TN-Bench results file."""
+    """Analyze only the telemetry data from a tn-bench results file."""
     try:
         with open(filepath, 'r') as f:
             results = json.load(f)
