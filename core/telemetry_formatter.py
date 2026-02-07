@@ -292,9 +292,17 @@ class TelemetryFormatter:
         if write_latency:
             latency_mean = write_latency.get('mean', 0)
             if latency_mean > 0 and latency_mean < 1.0:
-                # Convert all values from ms → μs for display
-                scaled = {k: v * 1000 if isinstance(v, (int, float)) else v
-                          for k, v in write_latency.items()}
+                # Convert positional values from ms → μs for display
+                # but preserve cv_percent (it's a ratio, not a unit-dependent value)
+                scaled = {}
+                ratio_keys = {'cv_percent', 'count'}
+                for k, v in write_latency.items():
+                    if k in ratio_keys:
+                        scaled[k] = v
+                    elif isinstance(v, (int, float)):
+                        scaled[k] = v * 1000
+                    else:
+                        scaled[k] = v
                 self._format_metric_row("Latency (μs)", scaled, rating_stats_override=write_latency)
             else:
                 self._format_metric_row("Latency (ms)", write_latency)

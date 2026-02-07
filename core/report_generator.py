@@ -376,7 +376,7 @@ def _convert_analytics_to_summary(ta: Dict[str, Any]) -> Dict[str, Any]:
             continue
         
         # Convert phase_stats format to per_segment format
-        per_segment[label] = {
+        seg_entry = {
             "sample_count": ps.get("duration_samples", 0),
             "iops": {
                 "write_all": ps.get("write_iops", {})
@@ -385,6 +385,19 @@ def _convert_analytics_to_summary(ta: Dict[str, Any]) -> Dict[str, Any]:
                 "write_all": ps.get("write_bandwidth_mbps", {})
             }
         }
+
+        # Include latency if present
+        w_lat = ps.get("write_latency_ms", {})
+        r_lat = ps.get("read_latency_ms", {})
+        if w_lat or r_lat:
+            lat = {}
+            if w_lat:
+                lat["total_wait_write"] = w_lat
+            if r_lat:
+                lat["total_wait_read"] = r_lat
+            seg_entry["latency_ms"] = lat
+
+        per_segment[label] = seg_entry
     
     # Build all_samples with latency from phase_stats
     all_samples = {}
