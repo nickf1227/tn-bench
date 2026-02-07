@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-tn-bench v2.0 - TrueNAS System Benchmark
+tn-bench v2.2 - TrueNAS System Benchmark
 
 Modular architecture with core functionality split into:
 - utils: Common utilities and formatting
@@ -33,7 +33,7 @@ from benchmarks import ZFSPoolBenchmark, EnhancedDiskBenchmark, BLOCK_SIZES
 
 def get_user_confirmation():
     """Display welcome message and get user confirmation to proceed."""
-    print_header("tn-bench v2.1 (Modular)")
+    print_header("tn-bench v2.2 (Modular)")
     print(color_text("tn-bench is an OpenSource Software Script that uses standard tools to", "BOLD"))
     print(color_text("Benchmark your System and collect various statistical information via", "BOLD"))
     print(color_text("the TrueNAS API.", "BOLD"))

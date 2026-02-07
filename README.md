@@ -1,8 +1,26 @@
-# tn-bench v2.1
+# tn-bench v2.2
 
 ##  tn-bench is an OpenSource software script that benchmarks your system and collects various statistical information via the TrueNAS API. It creates a dataset in each of your pools during testing, consuming 20 GiB of space for each thread in your system.
 
-## 🆕 What's New in v2.1
+## 🆕 What's New in v2.2
+
+### ARC Statistics Telemetry (arcstat)
+- Real-time ZFS ARC monitoring during READ benchmark phases
+- Measures cache hit rate, ARC size, MRU/MFU distribution, and prefetch effectiveness
+- Auto-detects L2ARC presence — L2ARC metrics omitted entirely on systems without cache devices
+- Per-thread-count analysis shows how ARC performance changes with workload scale
+
+### Enhanced Zpool Latency Analytics
+- **Fixed critical column mapping bug**: `zpool iostat -l` fields are interleaved read/write pairs, not grouped by type
+- **Latency unit auto-scaling**: Displays μs when mean < 1ms (NVMe-class storage), ms otherwise
+- Per-thread-count latency breakdown with P99 ratings and CV% consistency metrics
+
+### L2ARC Auto-Detection
+- Detects cache devices via `zpool status` before starting telemetry collection
+- Prevents arcstat crashes on systems without L2ARC hardware
+- Dynamic field list: 18 fields (core + zfetch) without L2ARC, 21 fields with L2ARC
+
+## Previous: What's New in v2.1
 
 ### Automatic Analytics
 - Post-benchmark analysis automatically identifies scaling patterns
@@ -88,7 +106,7 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed documentation on the modular
 ### Please note, this script needs to be run as `root`. 
 
    ```
-   git clone -b tn-bench-2.1 https://github.com/nickf1227/tn-bench.git && cd tn-bench && python3 truenas-bench.py
+   git clone -b tn-bench-2.2 https://github.com/nickf1227/tn-bench.git && cd tn-bench && python3 truenas-bench.py
    ```
 
 
@@ -272,7 +290,7 @@ tn-bench automatically analyzes benchmark results to identify scaling patterns a
 
 The analytics engine uses neutral data presentation — it reports what it observes without making performance judgments. You draw the conclusions.
 
-## Live Telemetry Output (v2.1+)
+## Live Telemetry Output (v2.2+)
 
 During benchmark execution, tn-bench collects zpool iostat telemetry and displays detailed per-thread performance statistics in real-time:
 
@@ -353,6 +371,63 @@ During benchmark execution, tn-bench collects zpool iostat telemetry and display
 - **Latency (ms)**: Response time statistics (P99-rated by speed thresholds)
 
 **Why READ telemetry is excluded**: ZFS ARC cache artificially inflates read performance numbers, making them misleading. tn-bench reports WRITE telemetry only for accurate pool performance visibility.
+
+## ARC Statistics (v2.2+)
+
+tn-bench v2.2 introduces comprehensive ARC (Adaptive Replacement Cache) telemetry using `arcstat`:
+
+### What's Collected
+
+| Metric | Description |
+|--------|-------------|
+| ARC Hit % | Percentage of reads served from ARC |
+| ARC Size (GiB) | Total ARC memory usage |
+| Demand/Prefetch Hit % | Breakdown of hit types |
+| MRU/MFU Distribution | Cache list balance |
+| L2ARC Hit % | Secondary cache effectiveness (if present) |
+| L2ARC Size (GiB) | L2ARC device capacity |
+| ZFetch Stats | Prefetch engine performance |
+
+### L2ARC Auto-Detection
+
+- Automatically detects L2ARC via `zpool status`
+- On systems **without** L2ARC: L2ARC metrics omitted entirely (no clutter)
+- On systems **with** L2ARC: Full L2ARC telemetry collected
+- Prevents arcstat crashes on non-L2ARC systems
+
+### Example ARC Summary
+
+```
+╔══════════════════════════════════════════════════════════╗
+║   ARC Statistics Summary (READ Phase) for Pool: inferno  ║
+╚══════════════════════════════════════════════════════════╝
+  • Total samples: 487  |  Read-phase samples: 132
+  • Duration: 486.23 seconds
+  • L2ARC: not present (L2ARC metrics omitted)
+
+──────────── Per-Thread-Count READ ARC Analysis ────────────
+  ARC cache performance during READ benchmark phases
+
+  1 Threads (4 samples):
+  ┌─ ARC Hit % ───────────────────────────────────────────────
+  │ Mean: 99.5% [Excellent] │
+  ├──────────────────────────────────────────────────────────┤
+  │ Median: 99.9%  │
+  ├──────────────────────────────────────────────────────────┤
+  │ Std Dev: 0.8 [Excellent] │
+  ├──────────────────────────────────────────────────────────┤
+  │ CV%: 0.8% Excellent │
+  └──────────────────────────────────────────────────────────┘
+  32 Threads (89 samples):
+  ┌─ ARC Hit % ───────────────────────────────────────────────
+  │ Mean: 57.9% [Poor] │
+```
+
+**Rating thresholds:**
+- **Excellent**: ≥ 95% (nearly all reads from cache)
+- **Good**: 85-95% (majority cached)
+- **Variable**: 70-85% (moderate caching)
+- **Poor**: < 70% (frequent cache misses)
 
 **Color Coding** (console output):
 - **Green**: Excellent ratings
@@ -435,12 +510,12 @@ During benchmark execution, tn-bench collects zpool iostat telemetry and display
 }
 ```
 
-## Example Output (M50 TrueNAS with v2.1 telemetry)
+## Example Output (M50 TrueNAS with v2.2 telemetry)
 
 ```
 
 ############################################################
-#                 TN-Bench v2.1 (Modular)                  #
+#                 tn-bench v2.2 (Modular)                  #
 ############################################################
 
 TN-Bench is an OpenSource Software Script that uses standard tools to
