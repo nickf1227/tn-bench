@@ -1,4 +1,4 @@
-# TN-Bench Code Audit Report
+# tn-bench Code Audit Report
 
 **Date:** 2026-02-07
 **Branch:** tn-bench-2.1
@@ -110,7 +110,7 @@ This would cause a `NameError` if an unknown test mode were passed.
 - `core/zpool_iostat_collector.py` — fallback no-op for standalone testing
 
 **Fix:** The formatter's copy exists to avoid importing `utils` (which would create a
-dependency on the full TN-Bench project). The collector's fallback is intentional for
+dependency on the full tn-bench project). The collector's fallback is intentional for
 standalone testing. Document but leave as-is.
 
 ---

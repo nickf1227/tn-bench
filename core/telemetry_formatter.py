@@ -1,5 +1,5 @@
 """
-Unified telemetry formatter for TN-Bench.
+Unified telemetry formatter for tn-bench.
 
 Provides a single source of truth for formatting telemetry data,
 with support for both console (ANSI colors) and markdown output.

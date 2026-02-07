@@ -1,12 +1,12 @@
-# TN-Bench Security & Change Control Guidelines
+# tn-bench Security & Change Control Guidelines
 
 ## Overview
-This document outlines security best practices and change control procedures for TN-Bench development and testing.
+This document outlines security best practices and change control procedures for tn-bench development and testing.
 
 ## Audit Logging
 
 ### Location
-All audit logs are stored in: `/Users/nickf/.openclaw/workspace/Projects/TN-Bench/logs/`
+All audit logs are stored in: `/Users/nickf/.openclaw/workspace/Projects/tn-bench/logs/`
 
 ### Log Files
 - **audit.log**: Commands executed on test box (SSH commands)
@@ -35,7 +35,7 @@ All audit logs are stored in: `/Users/nickf/.openclaw/workspace/Projects/TN-Benc
    - Log commit hash and message
    - Pull changes locally
    - Update test box repository
-   - Execute TN-Bench with automated inputs
+   - Execute tn-bench with automated inputs
    - Capture results
    - Cleanup test datasets
    - Log completion status
@@ -164,7 +164,7 @@ ssh -i ~/.ssh/tn_bench_test root@10.69.10.119
 
 ### 8. Data Protection
 **Test Data**:
-- TN-Bench uses synthetic data (`/dev/urandom`)
+- tn-bench uses synthetic data (`/dev/urandom`)
 - No real user data is processed
 - Safe to run on test infrastructure
 
@@ -205,19 +205,19 @@ ssh -i ~/.ssh/tn_bench_test root@10.69.10.119
 ### Check Audit Logs
 ```bash
 # View recent audit entries
-tail -f /Users/nickf/.openclaw/workspace/Projects/TN-Bench/logs/audit.log
+tail -f /Users/nickf/.openclaw/workspace/Projects/tn-bench/logs/audit.log
 
 # Search for specific commands
 grep "SSH COMMAND" audit.log | grep "zfs destroy"
 
 # View test results
-ls -lt /Users/nickf/.openclaw/workspace/Projects/TN-Bench/logs/test_*.log
+ls -lt /Users/nickf/.openclaw/workspace/Projects/tn-bench/logs/test_*.log
 ```
 
 ### Manual Test Trigger
 ```bash
 # Run regression test manually
-/Users/nickf/.openclaw/workspace/Projects/TN-Bench/scripts/nightly_regression.sh
+/Users/nickf/.openclaw/workspace/Projects/tn-bench/scripts/nightly_regression.sh
 ```
 
 ### Check Cron Status

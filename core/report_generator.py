@@ -1,7 +1,7 @@
 """
-TN-Bench Markdown Report Generator
+tn-bench Markdown Report Generator
 Generates human-readable markdown reports from analytics JSON.
-Part of TN-Bench 2.1
+Part of tn-bench 2.1
 """
 
 import json
@@ -15,7 +15,7 @@ def generate_markdown_report(analytics_data: Dict[str, Any], source_file: str) -
     lines = []
 
     # Header
-    lines.append("# TN-Bench Analytics Report")
+    lines.append("# tn-bench Analytics Report")
     lines.append("")
     lines.append(f"**Source:** `{source_file}`")
     lines.append(f"**Generated:** {datetime.now().strftime('%Y-%m-%d %H:%M:%S')}")
@@ -157,7 +157,7 @@ def _format_metrics_glossary() -> list:
     lines.append("")
     lines.append("- **KB/op**: Average kilobytes per operation. "
                  "Indicates sequential (large) vs random (small) I/O patterns.")
-    lines.append("- TN-Bench uses large sequential I/O (~900KB-1MB per operation).")
+    lines.append("- tn-bench uses large sequential I/O (~900KB-1MB per operation).")
     lines.append("")
     
     lines.append("---")
@@ -540,7 +540,7 @@ def _truncate_timestamp(ts: str) -> str:
 # ══════════════════════════════════════════════════════════════
 
 def main():
-    parser = argparse.ArgumentParser(description="Generate markdown report from TN-Bench analytics")
+    parser = argparse.ArgumentParser(description="Generate markdown report from tn-bench analytics")
     parser.add_argument("analytics_file", help="Path to analytics JSON file")
     parser.add_argument("-o", "--output", help="Output markdown file (default: stdout)")
     args = parser.parse_args()

@@ -1,5 +1,5 @@
 """
-Results management and JSON output for TN-Bench.
+Results management and JSON output for tn-bench.
 """
 
 import json

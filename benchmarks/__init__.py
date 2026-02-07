@@ -1,5 +1,5 @@
 """
-TN-Bench Benchmarks Module
+tn-bench Benchmarks Module
 
 Available benchmarks:
 - ZFSPoolBenchmark: ZFS pool sequential write/read with zpool iostat telemetry

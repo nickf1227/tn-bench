@@ -6,7 +6,7 @@ Tests parsing logic without requiring an actual ZFS pool.
 
 import sys
 import os
-sys.path.insert(0, '/Users/nickf/.openclaw/workspace/Projects/TN-Bench/tn-bench')
+sys.path.insert(0, '/Users/nickf/.openclaw/workspace/Projects/tn-bench/tn-bench')
 
 
 def test_value_with_suffix_parsing():
