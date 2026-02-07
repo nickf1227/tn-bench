@@ -359,20 +359,21 @@ class ZFSPoolBenchmark(BenchmarkBase):
             else:
                 return color_text("High Variance", "RED")
         
+        # Wider columns to handle large values
         def format_row(name: str, stats: dict) -> str:
             if not stats:
-                return f"  {name:<18} {'N/A':>10} {'N/A':>10} {'N/A':>10} {'N/A':>8} {'N/A':<12}"
+                return f"  {name:<18} {'N/A':>12} {'N/A':>12} {'N/A':>12} {'N/A':>10} {'N/A':<15}"
             mean = stats.get('mean', 0)
             p99 = stats.get('p99', 0)
             std_dev = stats.get('std_dev', 0)
             cv = stats.get('cv_percent', 0)
-            return f"  {name:<18} {mean:>10.1f} {p99:>10.1f} {std_dev:>10.1f} {cv:>7.1f}% {cv_rating(cv):<12}"
+            return f"  {name:<18} {mean:>12.1f} {p99:>12.1f} {std_dev:>12.1f} {cv:>9.1f}% {cv_rating(cv):<15}"
         
         # IOPS Table
         print("")
         print_subheader("IOPS Statistics")
-        print(f"  {'Metric':<18} {'Mean':>10} {'P99':>10} {'Std Dev':>10} {'CV%':>8} {'Rating':<12}")
-        print(f"  {'-'*18} {'-'*10} {'-'*10} {'-'*10} {'-'*8} {'-'*12}")
+        print(f"  {'Metric':<18} {'Mean':>12} {'P99':>12} {'Std Dev':>12} {'CV%':>10} {'Rating':<15}")
+        print(f"  {'-'*18} {'-'*12} {'-'*12} {'-'*12} {'-'*10} {'-'*15}")
         
         iops = summary.get('iops', {})
         write_stats = iops.get('write_active') or iops.get('write_all')
@@ -389,8 +390,8 @@ class ZFSPoolBenchmark(BenchmarkBase):
         # Bandwidth Table
         print("")
         print_subheader("Bandwidth (MB/s)")
-        print(f"  {'Metric':<18} {'Mean':>10} {'P99':>10} {'Std Dev':>10} {'CV%':>8} {'Rating':<12}")
-        print(f"  {'-'*18} {'-'*10} {'-'*10} {'-'*10} {'-'*8} {'-'*12}")
+        print(f"  {'Metric':<18} {'Mean':>12} {'P99':>12} {'Std Dev':>12} {'CV%':>10} {'Rating':<15}")
+        print(f"  {'-'*18} {'-'*12} {'-'*12} {'-'*12} {'-'*10} {'-'*15}")
         
         bw = summary.get('bandwidth_mbps', {})
         write_bw = bw.get('write_active') or bw.get('write_all')
@@ -408,8 +409,8 @@ class ZFSPoolBenchmark(BenchmarkBase):
         if has_latency:
             print("")
             print_subheader("Latency (ms)")
-            print(f"  {'Metric':<18} {'Mean':>10} {'P99':>10} {'Std Dev':>10} {'CV%':>8} {'Rating':<12}")
-            print(f"  {'-'*18} {'-'*10} {'-'*10} {'-'*10} {'-'*8} {'-'*12}")
+            print(f"  {'Metric':<18} {'Mean':>12} {'P99':>12} {'Std Dev':>12} {'CV%':>10} {'Rating':<15}")
+            print(f"  {'-'*18} {'-'*12} {'-'*12} {'-'*12} {'-'*10} {'-'*15}")
             
             if latency.get('total_wait_write'):
                 print(format_row("Write Wait", latency['total_wait_write']))
