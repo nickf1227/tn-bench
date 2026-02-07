@@ -272,6 +272,94 @@ TN-Bench automatically analyzes benchmark results to identify scaling patterns a
 
 The analytics engine uses neutral data presentation — it reports what it observes without making performance judgments. You draw the conclusions.
 
+## Live Telemetry Output (v2.1+)
+
+During benchmark execution, TN-Bench collects zpool iostat telemetry and displays detailed per-thread performance statistics in real-time:
+
+### Example Telemetry Summary (M50 TrueNAS)
+
+```
+╔══════════════════════════════════════════════════════════╗
+║        Zpool Iostat Telemetry Summary for Pool: ice      ║
+╚══════════════════════════════════════════════════════════╝
+  • Total samples: 1406  |  Steady-state samples: 1287
+  • Duration: 1442.23 seconds
+
+────────── Per-Thread-Count Steady-State Analysis ──────────
+  WRITE telemetry only (READ excluded due to ZFS ARC cache interference)
+
+  1 Threads (48 samples):
+  ┌─ IOPS ────────────────────────────────────────────────────
+  │ Mean: 958.4  │ Median: 0.0  │
+  ├──────────────────────────────────────────────────────────┤
+  │ P99: 4,940.5 [High] │
+  ├──────────────────────────────────────────────────────────┤
+  │ Std Dev: 1,466.3 [High Variance] │
+  ├──────────────────────────────────────────────────────────┤
+  │ CV%: 153.0% High Variance │
+  └──────────────────────────────────────────────────────────┘
+  ┌─ Bandwidth (MB/s) ────────────────────────────────────────
+  │ Mean: 307.9  │ Median: 0.0  │
+  ├──────────────────────────────────────────────────────────┤
+  │ P99: 1,194.2 [High] │
+  ├──────────────────────────────────────────────────────────┤
+  │ Std Dev: 487.5 [Good] │
+  ├──────────────────────────────────────────────────────────┤
+  │ CV%: 158.3% High Variance │
+  └──────────────────────────────────────────────────────────┘
+
+  10 Threads (100 samples):
+  ┌─ IOPS ────────────────────────────────────────────────────
+  │ Mean: 6,643.8  │ Median: 6,470.0  │
+  ├──────────────────────────────────────────────────────────┤
+  │ P99: 11,607.0 [High] │
+  ├──────────────────────────────────────────────────────────┤
+  │ Std Dev: 1,974.5 [High Variance] │
+  ├──────────────────────────────────────────────────────────┤
+  │ CV%: 29.7% Variable │
+  └──────────────────────────────────────────────────────────┘
+
+  40 Threads (376 samples):
+  ┌─ IOPS ────────────────────────────────────────────────────
+  │ Mean: 8,003.7  │ Median: 7,855.0  │
+  ├──────────────────────────────────────────────────────────┤
+  │ P99: 13,925.0 [High] │
+  ├──────────────────────────────────────────────────────────┤
+  │ Std Dev: 2,907.8 [High Variance] │
+  ├──────────────────────────────────────────────────────────┤
+  │ CV%: 36.3% High Variance │
+  └──────────────────────────────────────────────────────────┘
+
+────────────────────────── Legend ──────────────────────────
+  Statistical Measures:
+    • Mean:    Average of all samples
+    • Median:  Middle value (50th percentile), less affected by outliers
+    • P99:     99th percentile - 99% of samples fall below this value
+    • Std Dev: Standard deviation - measures spread/consistency
+    • CV%:     Coefficient of Variation (std dev / mean × 100)
+
+  CV% Rating (Consistency):
+    • Excellent:    < 10%  (highly consistent)
+    • Good:         10-20% (good consistency)
+    • Variable:     20-30% (some variability)
+    • High Variance:  > 30%  (significant inconsistency)
+```
+
+### Understanding the Output
+
+**Per-Thread Analysis**: Each thread count configuration shows:
+- **IOPS**: Operations per second with consistency ratings
+- **Bandwidth (MB/s)**: Throughput with spread analysis
+- **Latency (ms)**: Response time statistics (P99-rated by speed thresholds)
+
+**Why READ telemetry is excluded**: ZFS ARC cache artificially inflates read performance numbers, making them misleading. TN-Bench reports WRITE telemetry only for accurate pool performance visibility.
+
+**Color Coding** (console output):
+- **Green**: Excellent ratings
+- **Cyan**: Good ratings
+- **Yellow**: Variable/Acceptable
+- **Red**: High/High Variance
+
 ## JSON Schema 
 
 ```
