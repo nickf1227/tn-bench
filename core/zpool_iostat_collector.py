@@ -920,6 +920,20 @@ def calculate_zpool_iostat_summary(telemetry: ZpoolIostatTelemetry) -> dict:
                 **_stats_for_samples(seg_samples),
             }
 
+    # Fallback: if phase detection didn't run (e.g. reconstructed from JSON)
+    # but segment labels exist, build per-segment stats from all labeled samples
+    if not segment_stats:
+        labeled = [s for s in samples if s.segment_label]
+        if labeled:
+            seg_buckets: Dict[str, List[ZpoolIostatSample]] = {}
+            for s in labeled:
+                seg_buckets.setdefault(s.segment_label, []).append(s)
+            for lbl, seg_samples in seg_buckets.items():
+                segment_stats[lbl] = {
+                    "sample_count": len(seg_samples),
+                    **_stats_for_samples(seg_samples),
+                }
+
     # Phase summary
     phase_summary = _build_phase_summary(telemetry.phase_spans, samples)
 
