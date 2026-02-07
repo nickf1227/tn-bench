@@ -439,6 +439,19 @@ During benchmark execution, tn-bench collects zpool iostat telemetry and display
 
 ```
 
+remote: Enumerating objects: 15, done.
+remote: Counting objects: 100% (15/15), done.
+remote: Compressing objects: 100% (6/6), done.
+remote: Total 12 (delta 9), reused 9 (delta 6), pack-reused 0 (from 0)
+Unpacking objects: 100% (12/12), 2.86 KiB | 366.00 KiB/s, done.
+From https://github.com/nickf1227/tn-bench
+ * branch            tn-bench-2.1 -> FETCH_HEAD
+   5320bc2..a03cc96  tn-bench-2.1 -> origin/tn-bench-2.1
+Updating 5320bc2..a03cc96
+Fast-forward
+ core/telemetry_formatter.py | 104 +++++++++++++++++++++++++++++++++-----------
+ 1 file changed, 79 insertions(+), 25 deletions(-)
+
 ############################################################
 #                 TN-Bench v2.1 (Modular)                  #
 ############################################################
@@ -556,6 +569,20 @@ ZFS GUID   | 3818548647571812337
 Pool       | fire                      
 Size (GiB) | 1399.22                   
 -----------+---------------------------
+Name       | sdb                       
+Model      | HUSMH842_CLAR200          
+Serial     | 0LX1V8ZA                  
+ZFS GUID   | 5746264807514529662       
+Pool       | N/A                       
+Size (GiB) | 186.31                    
+-----------+---------------------------
+Name       | sda                       
+Model      | HUSMH842_CLAR200          
+Serial     | 0LX1V4NA                  
+ZFS GUID   | 8800999671142185461       
+Pool       | N/A                       
+Size (GiB) | 186.31                    
+-----------+---------------------------
 Name       | sdo                       
 Model      | HUS728T8TAL4204           
 Serial     | VAHD4XTL                  
@@ -569,8 +596,252 @@ Serial     | VAHE4AJL
 ZFS GUID   | 11464489017973229028      
 Pool       | ice                       
 Size (GiB) | 7452.04                   
-
-... (35 total disks)
+-----------+---------------------------
+Name       | sdz                       
+Model      | HUS728T8TAL4204           
+Serial     | VAHD4ZUL                  
+ZFS GUID   | 2629839678881986450       
+Pool       | ice                       
+Size (GiB) | 7452.04                   
+-----------+---------------------------
+Name       | sdaa                      
+Model      | HUS728T8TAL4204           
+Serial     | VAHAHSEL                  
+ZFS GUID   | 6248787858642409255       
+Pool       | ice                       
+Size (GiB) | 7452.04                   
+-----------+---------------------------
+Name       | sdn                       
+Model      | HUS728T8TAL4204           
+Serial     | VAH751XL                  
+ZFS GUID   | 12194731234089258709      
+Pool       | ice                       
+Size (GiB) | 7452.04                   
+-----------+---------------------------
+Name       | sdv                       
+Model      | HUS728T8TAL4204           
+Serial     | VAHDEEEL                  
+ZFS GUID   | 4070674839367337299       
+Pool       | ice                       
+Size (GiB) | 7452.04                   
+-----------+---------------------------
+Name       | sdr                       
+Model      | HUS728T8TAL4204           
+Serial     | VAHD4V0L                  
+ZFS GUID   | 1890505091264157917       
+Pool       | ice                       
+Size (GiB) | 7452.04                   
+-----------+---------------------------
+Name       | sdt                       
+Model      | HUS728T8TAL4204           
+Serial     | VAHDHLVL                  
+ZFS GUID   | 2813416134184314367       
+Pool       | ice                       
+Size (GiB) | 7452.04                   
+-----------+---------------------------
+Name       | sdu                       
+Model      | HUS728T8TAL4204           
+Serial     | VAHD99LL                  
+ZFS GUID   | 663480060468884393        
+Pool       | ice                       
+Size (GiB) | 7452.04                   
+-----------+---------------------------
+Name       | sdw                       
+Model      | HUS728T8TAL4204           
+Serial     | VAHDXDVL                  
+ZFS GUID   | 12468174715504800729      
+Pool       | ice                       
+Size (GiB) | 7452.04                   
+-----------+---------------------------
+Name       | sdx                       
+Model      | HUS728T8TAL4204           
+Serial     | VAH7T9BL                  
+ZFS GUID   | 241834966907461809        
+Pool       | ice                       
+Size (GiB) | 7452.04                   
+-----------+---------------------------
+Name       | sdy                       
+Model      | HUS728T8TAL4204           
+Serial     | VAGU6KLL                  
+ZFS GUID   | 8435778198864465328       
+Pool       | ice                       
+Size (GiB) | 7452.04                   
+-----------+---------------------------
+Name       | sdab                      
+Model      | HUH721010AL42C0           
+Serial     | 2TGU89UD                  
+ZFS GUID   | 16726686566456569573      
+Pool       | N/A                       
+Size (GiB) | 9314.00                   
+-----------+---------------------------
+Name       | sdac                      
+Model      | HUS728T8TAL4204           
+Serial     | VAHE4BDL                  
+ZFS GUID   | 12575810268036164475      
+Pool       | ice                       
+Size (GiB) | 7452.04                   
+-----------+---------------------------
+Name       | sdal                      
+Model      | HUS728T8TAL4204           
+Serial     | VAH4T4TL                  
+ZFS GUID   | 15395414914633738779      
+Pool       | ice                       
+Size (GiB) | 7452.04                   
+-----------+---------------------------
+Name       | sdam                      
+Model      | HUS728T8TAL4204           
+Serial     | VAHDBDXL                  
+ZFS GUID   | 480631239828802416        
+Pool       | ice                       
+Size (GiB) | 7452.04                   
+-----------+---------------------------
+Name       | sdad                      
+Model      | HUS728T8TAL4204           
+Serial     | VAH7B0EL                  
+ZFS GUID   | 3357271669658868424       
+Pool       | ice                       
+Size (GiB) | 7452.04                   
+-----------+---------------------------
+Name       | sdae                      
+Model      | HUS728T8TAL4204           
+Serial     | VAHD4UXL                  
+ZFS GUID   | 12084474217870916236      
+Pool       | ice                       
+Size (GiB) | 7452.04                   
+-----------+---------------------------
+Name       | sdaf                      
+Model      | HUS728T8TAL4204           
+Serial     | VAHE4AEL                  
+ZFS GUID   | 12420098536708636925      
+Pool       | ice                       
+Size (GiB) | 7452.04                   
+-----------+---------------------------
+Name       | sdag                      
+Model      | HUS728T8TAL4204           
+Serial     | VAHE35SL                  
+ZFS GUID   | 15641419920947187991      
+Pool       | ice                       
+Size (GiB) | 7452.04                   
+-----------+---------------------------
+Name       | sdah                      
+Model      | HUS728T8TAL4204           
+Serial     | VAH73TVL                  
+ZFS GUID   | 2321010819975352589       
+Pool       | ice                       
+Size (GiB) | 7452.04                   
+-----------+---------------------------
+Name       | sdai                      
+Model      | HUS728T8TAL4204           
+Serial     | VAH0LL4L                  
+ZFS GUID   | 7064277241025105086       
+Pool       | ice                       
+Size (GiB) | 7452.04                   
+-----------+---------------------------
+Name       | sdaj                      
+Model      | HUS728T8TAL4204           
+Serial     | VAHBHYGL                  
+ZFS GUID   | 9631990446359566766       
+Pool       | ice                       
+Size (GiB) | 7452.04                   
+-----------+---------------------------
+Name       | sdak                      
+Model      | HUS728T8TAL4204           
+Serial     | VAHE7BGL                  
+ZFS GUID   | 10666041267281724571      
+Pool       | ice                       
+Size (GiB) | 7452.04                   
+-----------+---------------------------
+Name       | sdd                       
+Model      | HUS728T8TAL4204           
+Serial     | VAHD406L                  
+ZFS GUID   | 13072059869888607441      
+Pool       | ice                       
+Size (GiB) | 7452.04                   
+-----------+---------------------------
+Name       | sde                       
+Model      | HUS728T8TAL4204           
+Serial     | VAHEE12L                  
+ZFS GUID   | 14718135334986108667      
+Pool       | ice                       
+Size (GiB) | 7452.04                   
+-----------+---------------------------
+Name       | sdp                       
+Model      | HUS728T8TAL4204           
+Serial     | VAHE1J1L                  
+ZFS GUID   | 16530722200458359384      
+Pool       | ice                       
+Size (GiB) | 7452.04                   
+-----------+---------------------------
+Name       | sdi                       
+Model      | HUS728T8TAL4204           
+Serial     | VAHDRYYL                  
+ZFS GUID   | 9383799614074970413       
+Pool       | ice                       
+Size (GiB) | 7452.04                   
+-----------+---------------------------
+Name       | sdf                       
+Model      | HUS728T8TAL4204           
+Serial     | VAHDPGUL                  
+ZFS GUID   | 6453720879157404243       
+Pool       | ice                       
+Size (GiB) | 7452.04                   
+-----------+---------------------------
+Name       | sdl                       
+Model      | HUS728T8TAL4204           
+Serial     | VAH7XX5L                  
+ZFS GUID   | 2415210037473635969       
+Pool       | ice                       
+Size (GiB) | 7452.04                   
+-----------+---------------------------
+Name       | sdj                       
+Model      | HUS728T8TAL4204           
+Serial     | VAHD06XL                  
+ZFS GUID   | 7980293907302437342       
+Pool       | ice                       
+Size (GiB) | 7452.04                   
+-----------+---------------------------
+Name       | sdh                       
+Model      | HUS728T8TAL4204           
+Serial     | VAH5W6PL                  
+ZFS GUID   | 2650944322410844617       
+Pool       | ice                       
+Size (GiB) | 7452.04                   
+-----------+---------------------------
+Name       | sdg                       
+Model      | HUS728T8TAL4204           
+Serial     | VAHDRZEL                  
+ZFS GUID   | 8709587202117841210       
+Pool       | ice                       
+Size (GiB) | 7452.04                   
+-----------+---------------------------
+Name       | sdm                       
+Model      | HUS728T8TAL4204           
+Serial     | VAHDPS6L                  
+ZFS GUID   | 5227492984876952151       
+Pool       | ice                       
+Size (GiB) | 7452.04                   
+-----------+---------------------------
+Name       | sdk                       
+Model      | HUS728T8TAL4204           
+Serial     | VAHDX95L                  
+ZFS GUID   | 13388807557241155624      
+Pool       | ice                       
+Size (GiB) | 7452.04                   
+-----------+---------------------------
+Name       | sdq                       
+Model      | HUS728T8TAL4204           
+Serial     | VAGEAVDL                  
+ZFS GUID   | 4320819603845537000       
+Pool       | ice                       
+Size (GiB) | 7452.04                   
+-----------+---------------------------
+Name       | sdc                       
+Model      | HUH721010AL42C0           
+Serial     | 2THPWEXD                  
+ZFS GUID   | None                      
+Pool       | N/A                       
+Size (GiB) | 9314.00                   
+-----------+---------------------------
 
 ############################################################
 #                      Pool Selection                      #
@@ -635,11 +906,24 @@ Enter iteration count [2]: 0
 ✓ Zpool iostat collector warmup complete
 
 ============================================================
- Testing Pool: fire - Threads: 10 
+ Testing Pool: fire - Threads: 1 
 ============================================================
 
 * --- Iteration 1 of 1 ---
 * Zpool iostat collector: benchmark phase started
+* Zpool iostat collector: segment → 1T-write
+* Iteration 1: Writing...
+* Iteration 1 write: 224.97 MB/s
+* Zpool iostat collector: segment → 1T-read
+* Iteration 1: Reading...
+* Iteration 1 read: 2661.03 MB/s
+* Space freed after iteration 1
+
+============================================================
+ Testing Pool: fire - Threads: 10 
+============================================================
+
+* --- Iteration 1 of 1 ---
 * Zpool iostat collector: segment → 10T-write
 * Iteration 1: Writing...
 * Iteration 1 write: 2023.22 MB/s
@@ -720,7 +1004,6 @@ Enter iteration count [2]: 0
   ├──────────────────────────────────────────────────────────┤
   │ CV%: 491.5% High Variance │
   └──────────────────────────────────────────────────────────┘
-
   20 Threads (143 samples):
   ┌─ IOPS ────────────────────────────────────────────────────
   │ Mean: 12,699.0  │ Median: 12,800.0  │
@@ -749,7 +1032,6 @@ Enter iteration count [2]: 0
   ├──────────────────────────────────────────────────────────┤
   │ CV%: 319.0% High Variance │
   └──────────────────────────────────────────────────────────┘
-
   40 Threads (288 samples):
   ┌─ IOPS ────────────────────────────────────────────────────
   │ Mean: 13,254.2  │ Median: 13,400.0  │
@@ -816,10 +1098,256 @@ Enter iteration count [2]: 0
 * Cleaning up any remaining test files...
 
 ############################################################
+#                    Testing Pool: ice                     #
+############################################################
+
+* Creating test dataset for pool: ice
+✓ Dataset ice/tn-bench created successfully.
+
+============================================================
+ Space Verification 
+============================================================
+
+* Available space: 40542.48 GiB
+* Space required:  800.00 GiB (20 GiB/thread × 40 threads)
+* Test iterations: 1 (space freed between iterations)
+✓ Sufficient space available - proceeding with benchmarks
+* Warming up zpool iostat collector (3 samples)...
+* Starting zpool iostat collection for pool 'ice' (interval: 1s)
+✓ Zpool iostat collector warmup complete
+
+============================================================
+ Testing Pool: ice - Threads: 1 
+============================================================
+
+* --- Iteration 1 of 1 ---
+* Zpool iostat collector: benchmark phase started
+* Zpool iostat collector: segment → 1T-write
+* Iteration 1: Writing...
+* Iteration 1 write: 224.79 MB/s
+* Zpool iostat collector: segment → 1T-read
+* Iteration 1: Reading...
+* Iteration 1 read: 2680.02 MB/s
+* Space freed after iteration 1
+
+============================================================
+ Testing Pool: ice - Threads: 10 
+============================================================
+
+* --- Iteration 1 of 1 ---
+* Zpool iostat collector: segment → 10T-write
+* Iteration 1: Writing...
+* Iteration 1 write: 1889.96 MB/s
+* Zpool iostat collector: segment → 10T-read
+* Iteration 1: Reading...
+* Iteration 1 read: 2139.68 MB/s
+* Space freed after iteration 1
+
+============================================================
+ Testing Pool: ice - Threads: 20 
+============================================================
+
+* --- Iteration 1 of 1 ---
+* Zpool iostat collector: segment → 20T-write
+* Iteration 1: Writing...
+* Iteration 1 write: 1970.23 MB/s
+* Zpool iostat collector: segment → 20T-read
+* Iteration 1: Reading...
+* Iteration 1 read: 2247.98 MB/s
+* Space freed after iteration 1
+
+============================================================
+ Testing Pool: ice - Threads: 40 
+============================================================
+
+* --- Iteration 1 of 1 ---
+* Zpool iostat collector: segment → 40T-write
+* Iteration 1: Writing...
+* Iteration 1 write: 2063.44 MB/s
+* Zpool iostat collector: segment → 40T-read
+* Iteration 1: Reading...
+* Iteration 1 read: 2378.88 MB/s
+* Space freed after iteration 1
+* Zpool iostat collector: benchmark phase ended
+* Cooling down zpool iostat collector (3 samples)...
+✓ Zpool iostat collector cooldown complete
+✓ Zpool iostat collection complete: 1406 samples
+
+============================================================
+ Zpool Iostat Telemetry Summary for Pool: ice 
+============================================================
+
+
+╔══════════════════════════════════════════════════════════╗
+║        Zpool Iostat Telemetry Summary for Pool: ice      ║
+╚══════════════════════════════════════════════════════════╝
+  • Total samples: 1406  |  Steady-state samples: 1287
+  • Duration: 1442.23 seconds
+
+────────── Per-Thread-Count Steady-State Analysis ──────────
+  WRITE telemetry only (READ excluded due to ZFS ARC cache interference)
+
+  1 Threads (48 samples):
+  ┌─ IOPS ────────────────────────────────────────────────────
+  │ Mean: 958.4  │ Median: 0.0  │
+  ├──────────────────────────────────────────────────────────┤
+  │ P99: 4,940.5 [High] │
+  ├──────────────────────────────────────────────────────────┤
+  │ Std Dev: 1,466.3 [High Variance] │
+  ├──────────────────────────────────────────────────────────┤
+  │ CV%: 153.0% High Variance │
+  └──────────────────────────────────────────────────────────┘
+  ┌─ Bandwidth (MB/s) ────────────────────────────────────────
+  │ Mean: 307.9  │ Median: 0.0  │
+  ├──────────────────────────────────────────────────────────┤
+  │ P99: 1,194.2 [High] │
+  ├──────────────────────────────────────────────────────────┤
+  │ Std Dev: 487.5 [Good] │
+  ├──────────────────────────────────────────────────────────┤
+  │ CV%: 158.3% High Variance │
+  └──────────────────────────────────────────────────────────┘
+  ┌─ Latency (ms) ────────────────────────────────────────────
+  │ Mean: 0.2  │ Median: 0.0  │
+  ├──────────────────────────────────────────────────────────┤
+  │ P99: 1.0 [Excellent] │
+  ├──────────────────────────────────────────────────────────┤
+  │ Std Dev: 0.3 [Excellent] │
+  ├──────────────────────────────────────────────────────────┤
+  │ CV%: 218.2% High Variance │
+  └──────────────────────────────────────────────────────────┘
+  10 Threads (100 samples):
+  ┌─ IOPS ────────────────────────────────────────────────────
+  │ Mean: 6,643.8  │ Median: 6,470.0  │
+  ├──────────────────────────────────────────────────────────┤
+  │ P99: 11,607.0 [High] │
+  ├──────────────────────────────────────────────────────────┤
+  │ Std Dev: 1,974.5 [High Variance] │
+  ├──────────────────────────────────────────────────────────┤
+  │ CV%: 29.7% Variable │
+  └──────────────────────────────────────────────────────────┘
+  ┌─ Bandwidth (MB/s) ────────────────────────────────────────
+  │ Mean: 2,635.8  │ Median: 2,760.0  │
+  ├──────────────────────────────────────────────────────────┤
+  │ P99: 4,372.8 [High] │
+  ├──────────────────────────────────────────────────────────┤
+  │ Std Dev: 932.0 [Variable] │
+  ├──────────────────────────────────────────────────────────┤
+  │ CV%: 35.4% High Variance │
+  └──────────────────────────────────────────────────────────┘
+  ┌─ Latency (ms) ────────────────────────────────────────────
+  │ Mean: 18.0  │ Median: 0.0  │
+  ├──────────────────────────────────────────────────────────┤
+  │ P99: 323.6 [High] │
+  ├──────────────────────────────────────────────────────────┤
+  │ Std Dev: 69.2 [High Variance] │
+  ├──────────────────────────────────────────────────────────┤
+  │ CV%: 383.6% High Variance │
+  └──────────────────────────────────────────────────────────┘
+  20 Threads (197 samples):
+  ┌─ IOPS ────────────────────────────────────────────────────
+  │ Mean: 8,182.8  │ Median: 8,230.0  │
+  ├──────────────────────────────────────────────────────────┤
+  │ P99: 16,416.0 [High] │
+  ├──────────────────────────────────────────────────────────┤
+  │ Std Dev: 3,012.9 [High Variance] │
+  ├──────────────────────────────────────────────────────────┤
+  │ CV%: 36.8% High Variance │
+  └──────────────────────────────────────────────────────────┘
+  ┌─ Bandwidth (MB/s) ────────────────────────────────────────
+  │ Mean: 2,745.3  │ Median: 2,710.0  │
+  ├──────────────────────────────────────────────────────────┤
+  │ P99: 4,793.2 [High] │
+  ├──────────────────────────────────────────────────────────┤
+  │ Std Dev: 1,122.3 [High Variance] │
+  ├──────────────────────────────────────────────────────────┤
+  │ CV%: 40.9% High Variance │
+  └──────────────────────────────────────────────────────────┘
+  ┌─ Latency (ms) ────────────────────────────────────────────
+  │ Mean: 10.1  │ Median: 0.0  │
+  ├──────────────────────────────────────────────────────────┤
+  │ P99: 353.8 [High] │
+  ├──────────────────────────────────────────────────────────┤
+  │ Std Dev: 53.5 [High Variance] │
+  ├──────────────────────────────────────────────────────────┤
+  │ CV%: 529.5% High Variance │
+  └──────────────────────────────────────────────────────────┘
+  40 Threads (376 samples):
+  ┌─ IOPS ────────────────────────────────────────────────────
+  │ Mean: 8,003.7  │ Median: 7,855.0  │
+  ├──────────────────────────────────────────────────────────┤
+  │ P99: 13,925.0 [High] │
+  ├──────────────────────────────────────────────────────────┤
+  │ Std Dev: 2,907.8 [High Variance] │
+  ├──────────────────────────────────────────────────────────┤
+  │ CV%: 36.3% High Variance │
+  └──────────────────────────────────────────────────────────┘
+  ┌─ Bandwidth (MB/s) ────────────────────────────────────────
+  │ Mean: 2,804.0  │ Median: 2,715.0  │
+  ├──────────────────────────────────────────────────────────┤
+  │ P99: 4,940.0 [High] │
+  ├──────────────────────────────────────────────────────────┤
+  │ Std Dev: 1,195.2 [High Variance] │
+  ├──────────────────────────────────────────────────────────┤
+  │ CV%: 42.6% High Variance │
+  └──────────────────────────────────────────────────────────┘
+  ┌─ Latency (ms) ────────────────────────────────────────────
+  │ Mean: 1.3  │ Median: 0.0  │
+  ├──────────────────────────────────────────────────────────┤
+  │ P99: 27.5 [Good] │
+  ├──────────────────────────────────────────────────────────┤
+  │ Std Dev: 6.1 [Good] │
+  ├──────────────────────────────────────────────────────────┤
+  │ CV%: 457.2% High Variance │
+  └──────────────────────────────────────────────────────────┘
+
+────────────────────────── Legend ──────────────────────────
+  Statistical Measures:
+    • Mean:    Average of all samples
+    • Median:  Middle value (50th percentile), less affected by outliers
+    • P99:     99th percentile - 99% of samples fall below this value
+    • Std Dev: Standard deviation - measures spread/consistency
+    • CV%:     Coefficient of Variation (std dev / mean × 100)
+
+  CV% Rating (Consistency):
+    • Excellent:    < 10%  (highly consistent)
+    • Good:         10-20% (good consistency)
+    • Variable:     20-30% (some variability)
+    • High Variance:  > 30%  (significant inconsistency)
+
+  P99 Latency Rating (Lower is better):
+    • Excellent:    < 10ms   (very fast)
+    • Good:         < 50ms   (acceptable)
+    • Acceptable:  < 100ms  (may impact workload)
+    • High:          > 100ms  (significant latency)
+
+  Std Dev Rating (Consistency - Lower is better):
+    • Excellent:    Low spread    (very consistent)
+    • Good:         Moderate      (acceptable spread)
+    • Variable:     Noticeable    (some spread)
+    • High Variance:  Wide spread   (inconsistent)
+
+============================================================
+ Pool Write Summary 
+============================================================
+
+* Total data written: 1420.00 GiB
+* Pool capacity: 260800.00 GiB
+* Benchmark duration: 1446.64 seconds
+* Drive Writes Per Day (DWPD): 0.33
+* Cleaning up any remaining test files...
+
+############################################################
 #                    Benchmark Complete                    #
 ############################################################
 
-✓ Total benchmark time: 16.01 minutes
+✓ Total benchmark time: 41.43 minutes
+
+Delete testing dataset fire/tn-bench? (yes/no): yes
+* Deleting dataset: fire/tn-bench
+! WARNING: Dataset not fully deleted. Performing diagnostics...
+* No processes found using lsof
+Force delete dataset? (yes/no) [no]: 
+
  
 ```
 
