@@ -28,14 +28,22 @@ def cleanup_test_files(dataset_path, file_prefix, num_threads):
             os.remove(file_path)
 
 
-def run_single_iteration(threads, bytes_per_thread, block_size, file_prefix, dataset_path, iteration_num):
+def run_single_iteration(threads, bytes_per_thread, block_size, file_prefix, dataset_path, iteration_num,
+                         on_segment_change=None):
     """
     Run a single write/read iteration and cleanup.
+    
+    Args:
+        on_segment_change: Optional callback(label: str) invoked before each
+                          write/read phase starts so the telemetry collector can
+                          label the workload segment.
     
     Returns:
         tuple: (write_speed, read_speed, bytes_written)
     """
     # Write phase
+    if on_segment_change:
+        on_segment_change(f"{threads}T-write")
     print_info(f"Iteration {iteration_num}: Writing...")
     start_time = time.time()
     
@@ -59,6 +67,8 @@ def run_single_iteration(threads, bytes_per_thread, block_size, file_prefix, dat
     print_info(f"Iteration {iteration_num} write: {color_text(f'{write_speed:.2f} MB/s', 'YELLOW')}")
     
     # Read phase
+    if on_segment_change:
+        on_segment_change(f"{threads}T-read")
     print_info(f"Iteration {iteration_num}: Reading...")
     start_time = time.time()
     
@@ -168,6 +178,11 @@ class ZFSPoolBenchmark(BenchmarkBase):
             self.zpool_iostat_collector = None
             return self._run_benchmark_without_zpool_iostat()
         
+        # Build a segment-change callback so iostat samples get labelled
+        def _on_segment_change(label: str):
+            if self.zpool_iostat_collector:
+                self.zpool_iostat_collector.signal_segment_change(label)
+
         try:
             # Run the benchmark
             for threads in thread_counts:
@@ -186,7 +201,8 @@ class ZFSPoolBenchmark(BenchmarkBase):
                     
                     write_speed, read_speed, bytes_written = run_single_iteration(
                         threads, self.bytes_per_thread, self.block_size,
-                        self.file_prefix, self.dataset_path, iteration
+                        self.file_prefix, self.dataset_path, iteration,
+                        on_segment_change=_on_segment_change,
                     )
                     write_speeds.append(write_speed)
                     read_speeds.append(read_speed)
@@ -332,210 +348,22 @@ class ZFSPoolBenchmark(BenchmarkBase):
             self._print_zpool_iostat_summary()
     
     def _print_inline_telemetry_summary(self, escaped_pool_name: str):
-        """Print telemetry summary immediately after benchmark (inline version)."""
+        """Print telemetry summary immediately after benchmark (uses unified formatter)."""
         from core.zpool_iostat_collector import calculate_zpool_iostat_summary
-        
+        from core.telemetry_formatter import format_telemetry_for_console
+
         print_section(f"Zpool Iostat Telemetry Summary for Pool: {escaped_pool_name}")
-        
         summary = calculate_zpool_iostat_summary(self.zpool_iostat_telemetry)
-        if not summary:
-            print_bullet("No telemetry data available")
-            return
-        
-        # Basic info
-        print_bullet(f"Total samples: {summary.get('total_samples', 0)}")
-        duration = summary.get('duration_seconds', 0)
-        if duration:
-            print_bullet(f"Duration: {duration:.2f} seconds")
-        
-        # Helper functions
-        def cv_rating(cv: float) -> str:
-            if cv < 10:
-                return color_text("Excellent", "GREEN")
-            elif cv < 20:
-                return color_text("Good", "CYAN")
-            elif cv < 30:
-                return color_text("Variable", "YELLOW")
-            else:
-                return color_text("High Variance", "RED")
-        
-        # Wider columns to handle large values
-        def format_row(name: str, stats: dict) -> str:
-            if not stats:
-                return f"  {name:<18} {'N/A':>12} {'N/A':>12} {'N/A':>12} {'N/A':>10} {'N/A':<15}"
-            mean = stats.get('mean', 0)
-            p99 = stats.get('p99', 0)
-            std_dev = stats.get('std_dev', 0)
-            cv = stats.get('cv_percent', 0)
-            return f"  {name:<18} {mean:>12.1f} {p99:>12.1f} {std_dev:>12.1f} {cv:>9.1f}% {cv_rating(cv):<15}"
-        
-        # IOPS Table
-        print("")
-        print_subheader("IOPS Statistics")
-        print(f"  {'Metric':<18} {'Mean':>12} {'P99':>12} {'Std Dev':>12} {'CV%':>10} {'Rating':<15}")
-        print(f"  {'-'*18} {'-'*12} {'-'*12} {'-'*12} {'-'*10} {'-'*15}")
-        
-        iops = summary.get('iops', {})
-        write_stats = iops.get('write_active') or iops.get('write_all')
-        read_stats = iops.get('read_active') or iops.get('read_all')
-        total_stats = iops.get('total_all')
-        
-        if write_stats:
-            print(format_row("Write", write_stats))
-        if read_stats:
-            print(format_row("Read", read_stats))
-        if total_stats:
-            print(format_row("Total", total_stats))
-        
-        # Bandwidth Table
-        print("")
-        print_subheader("Bandwidth (MB/s)")
-        print(f"  {'Metric':<18} {'Mean':>12} {'P99':>12} {'Std Dev':>12} {'CV%':>10} {'Rating':<15}")
-        print(f"  {'-'*18} {'-'*12} {'-'*12} {'-'*12} {'-'*10} {'-'*15}")
-        
-        bw = summary.get('bandwidth_mbps', {})
-        write_bw = bw.get('write_active') or bw.get('write_all')
-        read_bw = bw.get('read_active') or bw.get('read_all')
-        
-        if write_bw:
-            print(format_row("Write", write_bw))
-        if read_bw:
-            print(format_row("Read", read_bw))
-        
-        # Latency Table (if available)
-        latency = summary.get('latency_ms', {})
-        has_latency = any(latency.values())
-        
-        if has_latency:
-            print("")
-            print_subheader("Latency (ms)")
-            print(f"  {'Metric':<18} {'Mean':>12} {'P99':>12} {'Std Dev':>12} {'CV%':>10} {'Rating':<15}")
-            print(f"  {'-'*18} {'-'*12} {'-'*12} {'-'*12} {'-'*10} {'-'*15}")
-            
-            if latency.get('total_wait_write'):
-                print(format_row("Write Wait", latency['total_wait_write']))
-            if latency.get('total_wait_read'):
-                print(format_row("Read Wait", latency['total_wait_read']))
-        
-        # Legend
-        print("")
-        print("  Legend:")
-        print(f"    Mean = Average  |  P99 = 99th percentile  |  CV% = Consistency")
-        print(f"    {color_text('<10% Excellent', 'GREEN')}  |  {color_text('10-20% Good', 'CYAN')}  |  {color_text('20-30% Variable', 'YELLOW')}  |  {color_text('>30% High Var', 'RED')}")
+        output = format_telemetry_for_console(summary, escaped_pool_name)
+        print(output)
 
     def _print_zpool_iostat_summary(self):
-        """Print a comprehensive summary of the collected zpool iostat telemetry."""
+        """Print a comprehensive summary of the collected zpool iostat telemetry (delegates to inline)."""
         if not self.zpool_iostat_telemetry:
             return
-        
-        print_section("Zpool Iostat Telemetry Summary")
-        
         try:
-            from core.zpool_iostat_collector import calculate_zpool_iostat_summary
-            summary = calculate_zpool_iostat_summary(self.zpool_iostat_telemetry)
-            
-            if not summary:
-                print_bullet("No telemetry data available")
-                return
-            
-            # Print basic info
-            print_subheader("Collection Summary")
-            print_bullet(f"Total samples: {summary.get('total_samples', 0)}")
-            duration = summary.get('duration_seconds', 0)
-            if duration:
-                print_bullet(f"Duration: {duration:.2f} seconds")
-            
-            # Print IOPS table
-            print_subheader("IOPS (Operations Per Second)")
-            iops = summary.get('iops', {})
-            
-            # Header
-            print(f"\n  {'Metric':<20} {'Mean':>12} {'P99':>12} {'Std Dev':>12} {'CV%':>10} {'Consistency':<15}")
-            print(f"  {'-'*20} {'-'*12} {'-'*12} {'-'*12} {'-'*10} {'-'*15}")
-            
-            def cv_rating(cv: float) -> str:
-                if cv < 10:
-                    return color_text("Excellent", "GREEN")
-                elif cv < 20:
-                    return color_text("Good", "CYAN")
-                elif cv < 30:
-                    return color_text("Variable", "YELLOW")
-                else:
-                    return color_text("High Variance", "RED")
-            
-            def format_stat(stats: dict, name: str) -> str:
-                if not stats:
-                    return f"  {name:<20} {'N/A':>12} {'N/A':>12} {'N/A':>12} {'N/A':>10} {'N/A':<15}"
-                mean = stats.get('mean', 0)
-                p99 = stats.get('p99', 0)
-                std_dev = stats.get('std_dev', 0)
-                cv = stats.get('cv_percent', 0)
-                return f"  {name:<20} {mean:>12.2f} {p99:>12.2f} {std_dev:>12.2f} {cv:>9.1f}% {cv_rating(cv):<15}"
-            
-            # Write IOPS
-            write_active = iops.get('write_active')
-            if write_active:
-                print(format_stat(write_active, "Write (Active)"))
-            else:
-                print(format_stat(iops.get('write_all'), "Write (All)"))
-            
-            # Read IOPS
-            read_active = iops.get('read_active')
-            if read_active:
-                print(format_stat(read_active, "Read (Active)"))
-            else:
-                print(format_stat(iops.get('read_all'), "Read (All)"))
-            
-            # Total IOPS
-            print(format_stat(iops.get('total_all'), "Total (All)"))
-            
-            # Print Bandwidth table
-            print_subheader("Bandwidth (MB/s)")
-            bw = summary.get('bandwidth_mbps', {})
-            
-            print(f"\n  {'Metric':<20} {'Mean':>12} {'P99':>12} {'Std Dev':>12} {'CV%':>10} {'Consistency':<15}")
-            print(f"  {'-'*20} {'-'*12} {'-'*12} {'-'*12} {'-'*10} {'-'*15}")
-            
-            write_bw_active = bw.get('write_active')
-            if write_bw_active:
-                print(format_stat(write_bw_active, "Write (Active)"))
-            else:
-                print(format_stat(bw.get('write_all'), "Write (All)"))
-            
-            read_bw_active = bw.get('read_active')
-            if read_bw_active:
-                print(format_stat(read_bw_active, "Read (Active)"))
-            else:
-                print(format_stat(bw.get('read_all'), "Read (All)"))
-            
-            # Print Latency table (if available)
-            latency = summary.get('latency_ms', {})
-            if latency and any(latency.values()):
-                print_subheader("Latency (milliseconds)")
-                print(f"\n  {'Metric':<20} {'Mean':>12} {'P99':>12} {'Std Dev':>12} {'CV%':>10} {'Consistency':<15}")
-                print(f"  {'-'*20} {'-'*12} {'-'*12} {'-'*12} {'-'*10} {'-'*15}")
-                
-                if latency.get('total_wait_read'):
-                    print(format_stat(latency['total_wait_read'], "Total Wait Read"))
-                if latency.get('total_wait_write'):
-                    print(format_stat(latency['total_wait_write'], "Total Wait Write"))
-                if latency.get('disk_wait_read'):
-                    print(format_stat(latency['disk_wait_read'], "Disk Wait Read"))
-                if latency.get('disk_wait_write'):
-                    print(format_stat(latency['disk_wait_write'], "Disk Wait Write"))
-            
-            # Print legend
-            print_subheader("Legend")
-            print("  Mean:     Average value across all samples")
-            print("  P99:      99th percentile (99% of values below this)")
-            print("  Std Dev:  Standard deviation (measure of spread)")
-            print("  CV%:      Coefficient of Variation (consistency metric)")
-            print("  Consistency:")
-            print(f"    {color_text('< 10%: Excellent', 'GREEN')}")
-            print(f"    {color_text('10-20%: Good', 'CYAN')}")
-            print(f"    {color_text('20-30%: Variable', 'YELLOW')}")
-            print(f"    {color_text('> 30%: High Variance', 'RED')}")
-            
+            escaped_pool_name = self.pool_name.replace(" ", "\\ ")
+            self._print_inline_telemetry_summary(escaped_pool_name)
         except ImportError as e:
             print_bullet(f"Import error: {e}")
             print_bullet(f"Total samples collected: {len(self.zpool_iostat_telemetry.samples)}")

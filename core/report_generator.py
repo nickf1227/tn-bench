@@ -288,226 +288,156 @@ def _format_disk_section(disk_comparison: Dict[str, Any]) -> list:
 
 def _format_telemetry_section(ta: Dict[str, Any]) -> List[str]:
     """Format the complete telemetry analysis section for one pool."""
+    from core.telemetry_formatter import TelemetryFormatter, FormatConfig, OutputFormat
+    
     lines = []
     pool_name = ta.get("pool_name", "unknown")
 
     lines.append(f"## Telemetry: {pool_name}")
     lines.append("")
 
-    # ── Sample Summary ──
-    summary = ta.get("sample_summary", {})
-    if summary:
-        lines.append("### Sample Summary")
-        lines.append("")
-        lines.append(f"| Metric | Count | % of Total |")
-        lines.append(f"|--------|------:|----------:|")
-        lines.append(f"| Total Samples | {summary.get('total_samples', 0)} | 100% |")
-        lines.append(
-            f"| Active Write | {summary.get('active_write_samples', 0)} "
-            f"| {summary.get('active_write_pct', 0)}% |"
-        )
-        lines.append(
-            f"| Active Read | {summary.get('active_read_samples', 0)} "
-            f"| {summary.get('active_read_pct', 0)}% |"
-        )
-        lines.append(
-            f"| Idle | {summary.get('idle_samples', 0)} "
-            f"| {summary.get('idle_pct', 0)}% |"
-        )
-        lines.append("")
+    # Use unified formatter for core telemetry display (summary, per-thread analysis, latency)
+    # This ensures console and markdown share the same formatting logic
+    config = FormatConfig(format=OutputFormat.MARKDOWN, include_nerd_stats=False, include_read_metrics=False)
+    formatter = TelemetryFormatter(config)
+    
+    # Convert analytics format to summary format expected by formatter
+    summary = _convert_analytics_to_summary(ta)
+    core_output = formatter.format_telemetry_summary(summary, pool_name)
+    if core_output:
+        lines.append(core_output)
 
-    # ── IOPS ──
-    iops = ta.get("iops", {})
-    if iops:
-        lines.extend(_format_iops_section(iops))
+    # ── Additional "Nerd Stats" (markdown-only) ──
+    # These sections provide detailed statistics beyond the core console preview
+    
+    # Sample Summary
+    sample_summary = ta.get("sample_summary", {})
+    if sample_summary:
+        lines.extend(_format_sample_summary_section(sample_summary))
 
-    # ── Bandwidth ──
-    bw = ta.get("bandwidth_mbps", {})
-    if bw:
-        lines.extend(_format_bandwidth_section(bw))
-
-    # ── Latency ──
-    lat = ta.get("latency_ms", {})
-    if lat:
-        lines.extend(_format_latency_section(lat))
-
-    # ── Queue Depths ──
-    qd = ta.get("queue_depths", {})
-    if qd:
-        lines.extend(_format_queue_section(qd))
-
-    # ── I/O Size Analysis ──
+    # I/O Size Analysis
     io_size = ta.get("io_size_kb", {})
     if io_size:
         lines.extend(_format_io_size_section(io_size))
 
-    # ── Phase Analysis ──
-    phase_stats = ta.get("phase_stats", [])
-    if phase_stats:
-        lines.extend(_format_phase_section(phase_stats))
-
-    # ── Anomaly Detection ──
+    # Anomaly Detection
     anomalies = ta.get("anomalies", [])
     anomaly_count = ta.get("anomaly_count", len(anomalies))
     lines.extend(_format_anomaly_section(anomalies, anomaly_count))
 
-    # ── Capacity ──
+    # Capacity
     cap = ta.get("capacity_gib", {})
     if cap:
-        lines.append("### Capacity")
-        lines.append("")
-        lines.append(
-            f"| Metric | GiB |"
-        )
-        lines.append(f"|--------|----:|")
-        lines.append(f"| Start | {cap.get('start', 0):.2f} |")
-        lines.append(f"| End | {cap.get('end', 0):.2f} |")
-        lines.append(f"| Peak | {cap.get('max', 0):.2f} |")
-        lines.append(f"| Min | {cap.get('min', 0):.2f} |")
-        lines.append("")
-
-    # ── Observations ──
-    observations = ta.get("observations", [])
-    if observations:
-        lines.append("### Telemetry Observations")
-        lines.append("")
-        for obs in observations:
-            lines.append(f"- **{obs.get('category', '')}:** {obs.get('description', '')}")
-        lines.append("")
+        lines.extend(_format_capacity_section(cap))
 
     return lines
 
 
-def _format_stats_row(label: str, stats: Dict[str, Any], unit: str = "") -> str:
-    """Format a single stats dict as a markdown table row."""
-    if not stats or stats.get("count", 0) == 0:
-        return ""
-    u = f" {unit}" if unit else ""
-    return (
-        f"| {label} "
-        f"| {stats.get('count', 0)} "
-        f"| {stats.get('mean', 0):,.1f}{u} "
-        f"| {stats.get('median', 0):,.1f}{u} "
-        f"| {stats.get('p99', 0):,.1f}{u} "
-        f"| {stats.get('min', 0):,.1f}{u} "
-        f"| {stats.get('max', 0):,.1f}{u} "
-        f"| {stats.get('std_dev', 0):,.1f} "
-        f"| {stats.get('cv_percent', 0):.1f}% |"
+def _convert_analytics_to_summary(ta: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Convert analytics JSON format to summary format expected by TelemetryFormatter.
+    
+    The analytics format (from JSON) has a different structure than the
+    live telemetry format. This normalizes it for the unified formatter.
+    """
+    phase_stats = ta.get("phase_stats", [])
+    sample_summary = ta.get("sample_summary", {})
+    
+    # Build per_segment_steady_state from phase_stats
+    per_segment = {}
+    for ps in phase_stats:
+        label = ps.get("label")
+        if not label or ps.get("phase") == "idle":
+            continue
+        
+        # Convert phase_stats format to per_segment format
+        per_segment[label] = {
+            "sample_count": ps.get("duration_samples", 0),
+            "iops": {
+                "write_all": ps.get("write_iops", {})
+            },
+            "bandwidth_mbps": {
+                "write_all": ps.get("write_bandwidth_mbps", {})
+            }
+        }
+    
+    # Build all_samples with latency from phase_stats
+    all_samples = {}
+    if phase_stats:
+        # Aggregate latency across phases
+        write_latencies = []
+        read_latencies = []
+        for ps in phase_stats:
+            w_lat = ps.get("write_latency_ms", {})
+            r_lat = ps.get("read_latency_ms", {})
+            if w_lat:
+                write_latencies.append(w_lat)
+            if r_lat:
+                read_latencies.append(r_lat)
+        
+        # Use the first phase's latency as representative (or could aggregate)
+        latency_ms = {}
+        if write_latencies:
+            latency_ms["total_wait_write"] = write_latencies[0]
+        if read_latencies:
+            latency_ms["total_wait_read"] = read_latencies[0]
+        
+        if latency_ms:
+            all_samples["latency_ms"] = latency_ms
+    
+    return {
+        "total_samples": sample_summary.get("total_samples", 0),
+        "steady_state_samples": sample_summary.get("active_write_samples", 0) + sample_summary.get("active_read_samples", 0),
+        "duration_seconds": ta.get("duration_seconds", 0),
+        "per_segment_steady_state": per_segment,
+        "all_samples": all_samples
+    }
+
+
+def _format_sample_summary_section(summary: Dict[str, Any]) -> List[str]:
+    """Format the sample summary section (nerd stats)."""
+    lines = []
+    lines.append("### Sample Summary")
+    lines.append("")
+    lines.append(f"| Metric | Count | % of Total |")
+    lines.append(f"|--------|------:|----------:|")
+    lines.append(f"| Total Samples | {summary.get('total_samples', 0)} | 100% |")
+    lines.append(
+        f"| Active Write | {summary.get('active_write_samples', 0)} "
+        f"| {summary.get('active_write_pct', 0)}% |"
     )
-
-
-def _format_iops_section(iops: Dict[str, Any]) -> List[str]:
-    """Format IOPS statistics."""
-    lines = []
-    lines.append("### IOPS")
-    lines.append("")
-    lines.append("| Metric | Samples | Mean | Median | P99 | Min | Max | Std Dev | CV |")
-    lines.append("|--------|--------:|-----:|-------:|----:|----:|----:|--------:|---:|")
-
-    # All samples
-    for key, label in [("write_ops", "Write (all)"), ("read_ops", "Read (all)"), ("total_ops", "Total (all)")]:
-        row = _format_stats_row(label, iops.get("all_samples", {}).get(key, {}))
-        if row:
-            lines.append(row)
-
-    # Active only
-    for key, label in [("write_ops", "Write (active)"), ("read_ops", "Read (active)")]:
-        row = _format_stats_row(label, iops.get("active_only", {}).get(key, {}))
-        if row:
-            lines.append(row)
-
+    lines.append(
+        f"| Active Read | {summary.get('active_read_samples', 0)} "
+        f"| {summary.get('active_read_pct', 0)}% |"
+    )
+    lines.append(
+        f"| Idle | {summary.get('idle_samples', 0)} "
+        f"| {summary.get('idle_pct', 0)}% |"
+    )
     lines.append("")
     return lines
 
 
-def _format_bandwidth_section(bw: Dict[str, Any]) -> List[str]:
-    """Format bandwidth statistics."""
+def _format_capacity_section(cap: Dict[str, Any]) -> List[str]:
+    """Format the capacity section (nerd stats)."""
     lines = []
-    lines.append("### Bandwidth (MB/s)")
+    lines.append("### Capacity")
     lines.append("")
-    lines.append("| Metric | Samples | Mean | Median | P99 | Min | Max | Std Dev | CV |")
-    lines.append("|--------|--------:|-----:|-------:|----:|----:|----:|--------:|---:|")
-
-    for key, label in [("write", "Write (all)"), ("read", "Read (all)")]:
-        row = _format_stats_row(label, bw.get("all_samples", {}).get(key, {}))
-        if row:
-            lines.append(row)
-
-    for key, label in [("write", "Write (active)"), ("read", "Read (active)")]:
-        row = _format_stats_row(label, bw.get("active_only", {}).get(key, {}))
-        if row:
-            lines.append(row)
-
+    lines.append(f"| Metric | GiB |")
+    lines.append(f"|--------|----:|")
+    lines.append(f"| Start | {cap.get('start', 0):.2f} |")
+    lines.append(f"| End | {cap.get('end', 0):.2f} |")
+    lines.append(f"| Peak | {cap.get('max', 0):.2f} |")
+    lines.append(f"| Min | {cap.get('min', 0):.2f} |")
     lines.append("")
     return lines
 
 
-def _format_latency_section(lat: Dict[str, Any]) -> List[str]:
-    """Format latency statistics."""
-    lines = []
-    lines.append("### Latency (ms)")
-    lines.append("")
-    lines.append("| Metric | Samples | Mean | Median | P99 | Min | Max | Std Dev | CV |")
-    lines.append("|--------|--------:|-----:|-------:|----:|----:|----:|--------:|---:|")
 
-    # Total wait
-    for key, label in [("read", "Total Wait Read"), ("write", "Total Wait Write")]:
-        row = _format_stats_row(label, lat.get("total_wait", {}).get(key, {}))
-        if row:
-            lines.append(row)
-
-    # Disk wait
-    for key, label in [("read", "Disk Wait Read"), ("write", "Disk Wait Write")]:
-        row = _format_stats_row(label, lat.get("disk_wait", {}).get(key, {}))
-        if row:
-            lines.append(row)
-
-    # Active only
-    active = lat.get("active_only", {})
-    for key, label in [
-        ("total_wait_write", "Total Wait Write (active)"),
-        ("total_wait_read", "Total Wait Read (active)"),
-        ("disk_wait_read", "Disk Wait Read (active)"),
-        ("disk_wait_write", "Disk Wait Write (active)"),
-    ]:
-        row = _format_stats_row(label, active.get(key, {}))
-        if row:
-            lines.append(row)
-
-    lines.append("")
-    return lines
-
-
-def _format_queue_section(qd: Dict[str, Any]) -> List[str]:
-    """Format queue depth statistics."""
-    lines = []
-    lines.append("### Queue Depths (ms)")
-    lines.append("")
-    lines.append("| Metric | Samples | Mean | Median | P99 | Min | Max | Std Dev | CV |")
-    lines.append("|--------|--------:|-----:|-------:|----:|----:|----:|--------:|---:|")
-
-    for key, label in [
-        ("asyncq_wait_write", "Async Queue Write"),
-        ("asyncq_wait_read", "Async Queue Read"),
-        ("syncq_wait_write", "Sync Queue Write"),
-        ("syncq_wait_read", "Sync Queue Read"),
-    ]:
-        row = _format_stats_row(label, qd.get(key, {}))
-        if row:
-            lines.append(row)
-
-    # Active only
-    active = qd.get("active_only", {})
-    for key, label in [
-        ("asyncq_wait_write", "Async Queue Write (active)"),
-        ("syncq_wait_write", "Sync Queue Write (active)"),
-    ]:
-        row = _format_stats_row(label, active.get(key, {}))
-        if row:
-            lines.append(row)
-
-    lines.append("")
-    return lines
+# NOTE: _format_iops_section, _format_bandwidth_section, _format_latency_section,
+# _format_queue_section, _format_stats_row, and _cv_rating were removed in the
+# 2.1 audit. They were dead code — superseded by the unified TelemetryFormatter
+# in core/telemetry_formatter.py. See AUDIT_REPORT.md for details.
 
 
 def _format_io_size_section(io_size: Dict[str, Any]) -> List[str]:
@@ -546,84 +476,6 @@ def _format_io_size_section(io_size: Dict[str, Any]) -> List[str]:
             )
 
         lines.append("")
-
-    return lines
-
-
-def _format_phase_section(phase_stats: List[Dict[str, Any]]) -> List[str]:
-    """Format phase detection results."""
-    lines = []
-    lines.append("### Phase Analysis")
-    lines.append("")
-
-    # Summary table
-    lines.append("| # | Phase | Duration (samples) | Start | End |")
-    lines.append("|---|-------|-----------------:|-------|-----|")
-
-    for i, ps in enumerate(phase_stats, 1):
-        phase = ps.get("phase", "?").upper()
-        dur = ps.get("duration_samples", 0)
-        start = _truncate_timestamp(ps.get("start_time", ""))
-        end = _truncate_timestamp(ps.get("end_time", ""))
-        lines.append(f"| {i} | {phase} | {dur} | {start} | {end} |")
-
-    lines.append("")
-
-    # Detailed per-phase stats
-    active_phases = [ps for ps in phase_stats if ps.get("phase") != "idle"]
-    if active_phases:
-        lines.append("**Active Phase Details:**")
-        lines.append("")
-
-        for ps in active_phases:
-            phase = ps.get("phase", "?").upper()
-            dur = ps.get("duration_samples", 0)
-            lines.append(f"**{phase}** ({dur} samples)")
-            lines.append("")
-
-            # Write stats for this phase
-            w_iops = ps.get("write_iops", {})
-            w_bw = ps.get("write_bandwidth_mbps", {})
-            w_lat = ps.get("write_latency_ms", {})
-            if w_iops.get("count", 0) > 0:
-                lines.append(
-                    f"- Write IOPS: mean={w_iops['mean']:,.0f}, "
-                    f"p99={w_iops['p99']:,.0f}, "
-                    f"CV={w_iops.get('cv_percent', 0):.1f}%"
-                )
-            if w_bw.get("count", 0) > 0:
-                lines.append(
-                    f"- Write BW: mean={w_bw['mean']:,.1f} MB/s, "
-                    f"peak={w_bw['max']:,.1f} MB/s"
-                )
-            if w_lat.get("count", 0) > 0:
-                lines.append(
-                    f"- Write Latency: mean={w_lat['mean']:.2f}ms, "
-                    f"p99={w_lat['p99']:.2f}ms"
-                )
-
-            # Read stats for this phase
-            r_iops = ps.get("read_iops", {})
-            r_bw = ps.get("read_bandwidth_mbps", {})
-            r_lat = ps.get("read_latency_ms", {})
-            if r_iops.get("count", 0) > 0:
-                lines.append(
-                    f"- Read IOPS: mean={r_iops['mean']:,.0f}, "
-                    f"p99={r_iops['p99']:,.0f}, "
-                    f"CV={r_iops.get('cv_percent', 0):.1f}%"
-                )
-            if r_bw.get("count", 0) > 0:
-                lines.append(
-                    f"- Read BW: mean={r_bw['mean']:,.1f} MB/s, "
-                    f"peak={r_bw['max']:,.1f} MB/s"
-                )
-            if r_lat.get("count", 0) > 0:
-                lines.append(
-                    f"- Read Latency: mean={r_lat['mean']:.2f}ms, "
-                    f"p99={r_lat['p99']:.2f}ms"
-                )
-
-            lines.append("")
 
     return lines
 

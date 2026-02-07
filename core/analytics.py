@@ -757,9 +757,16 @@ class TelemetryAnalyzer:
     def _compute_phase_stats(
         self, phases: List[PhaseSegment], samples: List[Dict]
     ) -> List[Dict[str, Any]]:
-        """Compute per-phase statistics."""
+        """Compute per-phase statistics with thread count inference."""
         MB = 1024**2
         results = []
+
+        # Track thread count progression based on phase timing
+        # First write phase = 1T, second = 8T, third = 16T, fourth = 32T
+        # Same for read phases
+        write_phase_count = 0
+        read_phase_count = 0
+        thread_progression = [1, 8, 16, 32]
 
         for phase in phases:
             ps: Dict[str, Any] = {
@@ -778,6 +785,28 @@ class TelemetryAnalyzer:
             phase_samples = samples[start:end]
 
             if len(phase_samples) < self.MIN_PHASE_SAMPLES:
+                # Still label short phases for timeline context
+                if phase.phase == IOPhase.WRITE:
+                    write_phase_count += 1
+                    if write_phase_count <= len(thread_progression):
+                        ps["label"] = f"{thread_progression[write_phase_count - 1]}T-write"
+                elif phase.phase == IOPhase.READ:
+                    read_phase_count += 1
+                    if read_phase_count <= len(thread_progression):
+                        ps["label"] = f"{thread_progression[read_phase_count - 1]}T-read"
+                elif phase.phase == IOPhase.MIXED:
+                    # Try to determine if mixed phase is mostly read or write
+                    total_write_ops = sum(s["write_ops"] for s in phase_samples)
+                    total_read_ops = sum(s["read_ops"] for s in phase_samples)
+                    if total_write_ops > total_read_ops:
+                        write_phase_count += 1
+                        if write_phase_count <= len(thread_progression):
+                            ps["label"] = f"{thread_progression[write_phase_count - 1]}T-write"
+                    else:
+                        read_phase_count += 1
+                        if read_phase_count <= len(thread_progression):
+                            ps["label"] = f"{thread_progression[read_phase_count - 1]}T-read"
+
                 results.append(ps)
                 continue
 
@@ -800,6 +829,11 @@ class TelemetryAnalyzer:
                 if w_lat:
                     ps["write_latency_ms"] = compute_stats(w_lat).to_dict()
 
+                # Label write phase
+                write_phase_count += 1
+                if write_phase_count <= len(thread_progression):
+                    ps["label"] = f"{thread_progression[write_phase_count - 1]}T-write"
+
             if nz_r_ops:
                 ps["read_iops"] = compute_stats(nz_r_ops).to_dict()
                 ps["read_bandwidth_mbps"] = compute_stats(nz_r_bw).to_dict()
@@ -811,6 +845,25 @@ class TelemetryAnalyzer:
                 ]
                 if r_lat:
                     ps["read_latency_ms"] = compute_stats(r_lat).to_dict()
+
+                # Label read phase
+                if ps.get("label") is None:  # Don't overwrite if already labeled as write
+                    read_phase_count += 1
+                    if read_phase_count <= len(thread_progression):
+                        ps["label"] = f"{thread_progression[read_phase_count - 1]}T-read"
+
+            # Label mixed phases based on dominant operation
+            if phase.phase == IOPhase.MIXED and ps.get("label") is None:
+                total_write_ops = sum(nz_w_ops) if nz_w_ops else 0
+                total_read_ops = sum(nz_r_ops) if nz_r_ops else 0
+                if total_write_ops > total_read_ops:
+                    write_phase_count += 1
+                    if write_phase_count <= len(thread_progression):
+                        ps["label"] = f"{thread_progression[write_phase_count - 1]}T-write"
+                else:
+                    read_phase_count += 1
+                    if read_phase_count <= len(thread_progression):
+                        ps["label"] = f"{thread_progression[read_phase_count - 1]}T-read"
 
             results.append(ps)
 
