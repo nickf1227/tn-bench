@@ -288,7 +288,7 @@ def _format_disk_section(disk_comparison: Dict[str, Any]) -> list:
 
 def _format_telemetry_section(ta: Dict[str, Any]) -> List[str]:
     """Format the complete telemetry analysis section for one pool."""
-    from core.telemetry_formatter import TelemetryFormatter
+    from core.telemetry_formatter import TelemetryFormatter, FormatConfig, OutputFormat
     
     lines = []
     pool_name = ta.get("pool_name", "unknown")
@@ -298,13 +298,14 @@ def _format_telemetry_section(ta: Dict[str, Any]) -> List[str]:
 
     # Use unified formatter for core telemetry display (summary, per-thread analysis, latency)
     # This ensures console and markdown share the same formatting logic
-    formatter = TelemetryFormatter(mode='markdown')
+    config = FormatConfig(format=OutputFormat.MARKDOWN, include_nerd_stats=False, include_read_metrics=False)
+    formatter = TelemetryFormatter(config)
     
     # Convert analytics format to summary format expected by formatter
     summary = _convert_analytics_to_summary(ta)
-    core_lines = formatter.format_telemetry(summary, pool_name)
-    if core_lines:
-        lines.extend(core_lines)
+    core_output = formatter.format_telemetry_summary(summary, pool_name)
+    if core_output:
+        lines.append(core_output)
 
     # ── Additional "Nerd Stats" (markdown-only) ──
     # These sections provide detailed statistics beyond the core console preview

@@ -349,10 +349,13 @@ class ZFSPoolBenchmark(BenchmarkBase):
     
     def _print_inline_telemetry_summary(self, escaped_pool_name: str):
         """Print telemetry summary immediately after benchmark (uses unified formatter)."""
+        from core.zpool_iostat_collector import calculate_zpool_iostat_summary
         from core.telemetry_formatter import format_telemetry_for_console
 
         print_section(f"Zpool Iostat Telemetry Summary for Pool: {escaped_pool_name}")
-        format_telemetry_for_console(self.zpool_iostat_telemetry, escaped_pool_name)
+        summary = calculate_zpool_iostat_summary(self.zpool_iostat_telemetry)
+        output = format_telemetry_for_console(summary, escaped_pool_name)
+        print(output)
 
     def _print_zpool_iostat_summary(self):
         """Print a comprehensive summary of the collected zpool iostat telemetry (delegates to inline)."""
