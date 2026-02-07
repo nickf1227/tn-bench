@@ -111,10 +111,13 @@ def format_arcstat_for_console(summary: Dict[str, Any], pool_name: str) -> str:
     total = summary.get("total_samples", 0)
     read_count = summary.get("read_phase_samples", 0)
     duration = summary.get("duration_seconds", 0)
+    has_l2arc = summary.get("has_l2arc", False)
 
     lines.append(f"  • Total samples: {total}  |  Read-phase samples: {read_count}")
     if duration:
         lines.append(f"  • Duration: {duration:.2f} seconds")
+    if not has_l2arc:
+        lines.append(f"  • L2ARC: not present (L2ARC metrics omitted)")
     lines.append("")
 
     # Per-segment read analysis
@@ -128,13 +131,13 @@ def format_arcstat_for_console(summary: Dict[str, Any], pool_name: str) -> str:
         read_phases = sorted(per_seg.items(), key=_sort_by_thread_count)
 
         for seg_label, seg_data in read_phases:
-            seg_lines = _format_console_segment(seg_label, seg_data)
+            seg_lines = _format_console_segment(seg_label, seg_data, has_l2arc=has_l2arc)
             lines.extend(seg_lines)
 
         lines.append("")
 
     # Legend
-    lines.extend(_format_console_legend())
+    lines.extend(_format_console_legend(has_l2arc=has_l2arc))
 
     return "\n".join(lines)
 
@@ -155,7 +158,7 @@ def _sort_by_thread_count(item):
         return 0
 
 
-def _format_console_segment(seg_label: str, seg_data: Dict[str, Any]) -> List[str]:
+def _format_console_segment(seg_label: str, seg_data: Dict[str, Any], has_l2arc: bool = False) -> List[str]:
     """Format a single READ segment for console output."""
     lines: List[str] = []
     cnt = seg_data.get("sample_count", 0)
@@ -180,15 +183,15 @@ def _format_console_segment(seg_label: str, seg_data: Dict[str, Any]) -> List[st
     if arc_size:
         lines.extend(_format_console_metric_val("ARC Size (GiB)", arc_size))
 
-    # L2ARC Hit Rate
-    l2_hit = seg_data.get("l2_hit_pct", {})
-    if l2_hit and l2_hit.get("mean", 0) > 0:
-        lines.extend(_format_console_metric_pct("L2ARC Hit %", l2_hit, get_l2_hit_rating))
+    # L2ARC — only if pool actually has cache devices
+    if has_l2arc:
+        l2_hit = seg_data.get("l2_hit_pct", {})
+        if l2_hit and l2_hit.get("mean", 0) > 0:
+            lines.extend(_format_console_metric_pct("L2ARC Hit %", l2_hit, get_l2_hit_rating))
 
-    # L2ARC Throughput
-    l2_bytes = seg_data.get("l2_bytes_per_sec_mbs", {})
-    if l2_bytes and l2_bytes.get("mean", 0) > 0:
-        lines.extend(_format_console_metric_val("L2ARC Read (MB/s)", l2_bytes))
+        l2_bytes = seg_data.get("l2_bytes_per_sec_mbs", {})
+        if l2_bytes and l2_bytes.get("mean", 0) > 0:
+            lines.extend(_format_console_metric_val("L2ARC Read (MB/s)", l2_bytes))
 
     return lines
 
@@ -285,27 +288,29 @@ def _format_console_metric_val(
     return lines
 
 
-def _format_console_legend() -> List[str]:
+def _format_console_legend(has_l2arc: bool = False) -> List[str]:
     """ARC-specific legend for console output."""
     lines: List[str] = []
     lines.append(_console_subheader("ARC Legend"))
     lines.append("  ARC Metrics:")
     lines.append("    • ARC Hit %:       Percentage of reads served from ARC (higher = better)")
     lines.append("    • ARC Size (GiB):  Total ARC memory usage")
-    lines.append("    • L2ARC Hit %:     Percentage of L2ARC reads that were hits")
-    lines.append("    • L2ARC Read:      Data read from L2ARC device (MB/s)")
+    if has_l2arc:
+        lines.append("    • L2ARC Hit %:     Percentage of L2ARC reads that were hits")
+        lines.append("    • L2ARC Read:      Data read from L2ARC device (MB/s)")
     lines.append("")
     lines.append("  ARC Hit % Rating:")
     lines.append(f"    • {_color('Excellent', 'GREEN')}:    ≥ 95%  (nearly all reads from cache)")
     lines.append(f"    • {_color('Good', 'CYAN')}:         85-95% (majority cached)")
     lines.append(f"    • {_color('Variable', 'YELLOW')}:     70-85% (moderate caching)")
     lines.append(f"    • {_color('Poor', 'RED')}:          < 70%  (frequent cache misses)")
-    lines.append("")
-    lines.append("  L2ARC Hit % Rating:")
-    lines.append(f"    • {_color('Excellent', 'GREEN')}:    ≥ 80%")
-    lines.append(f"    • {_color('Good', 'CYAN')}:         60-80%")
-    lines.append(f"    • {_color('Variable', 'YELLOW')}:     40-60%")
-    lines.append(f"    • {_color('Low', 'RED')}:           < 40%")
+    if has_l2arc:
+        lines.append("")
+        lines.append("  L2ARC Hit % Rating:")
+        lines.append(f"    • {_color('Excellent', 'GREEN')}:    ≥ 80%")
+        lines.append(f"    • {_color('Good', 'CYAN')}:         60-80%")
+        lines.append(f"    • {_color('Variable', 'YELLOW')}:     40-60%")
+        lines.append(f"    • {_color('Low', 'RED')}:           < 40%")
     lines.append("")
     return lines
 
@@ -338,9 +343,13 @@ def format_arcstat_for_markdown(summary: Dict[str, Any], pool_name: str) -> str:
     read_count = summary.get("read_phase_samples", 0)
     duration = summary.get("duration_seconds", 0)
 
+    has_l2arc = summary.get("has_l2arc", False)
+
     lines.append(f"- **Total samples:** {total}  |  **Read-phase samples:** {read_count}")
     if duration:
         lines.append(f"- **Duration:** {duration:.2f} seconds")
+    if not has_l2arc:
+        lines.append(f"- **L2ARC:** not present (L2ARC metrics omitted)")
     lines.append("")
 
     # Per-segment
@@ -356,16 +365,16 @@ def format_arcstat_for_markdown(summary: Dict[str, Any], pool_name: str) -> str:
         read_phases = sorted(per_seg.items(), key=_sort_by_thread_count)
 
         for seg_label, seg_data in read_phases:
-            seg_lines = _format_markdown_segment(seg_label, seg_data)
+            seg_lines = _format_markdown_segment(seg_label, seg_data, has_l2arc=has_l2arc)
             lines.extend(seg_lines)
 
     # Legend
-    lines.extend(_format_markdown_legend())
+    lines.extend(_format_markdown_legend(has_l2arc=has_l2arc))
 
     return "\n".join(lines)
 
 
-def _format_markdown_segment(seg_label: str, seg_data: Dict[str, Any]) -> List[str]:
+def _format_markdown_segment(seg_label: str, seg_data: Dict[str, Any], has_l2arc: bool = False) -> List[str]:
     """Format a single READ segment for markdown output."""
     lines: List[str] = []
     cnt = seg_data.get("sample_count", 0)
@@ -389,15 +398,15 @@ def _format_markdown_segment(seg_label: str, seg_data: Dict[str, Any]) -> List[s
     if arc_size:
         lines.extend(_format_markdown_metric_row("ARC Size (GiB)", arc_size))
 
-    # L2ARC Hit %
-    l2_hit = seg_data.get("l2_hit_pct", {})
-    if l2_hit and l2_hit.get("mean", 0) > 0:
-        lines.extend(_format_markdown_metric_row("L2ARC Hit %", l2_hit, get_l2_hit_rating))
+    # L2ARC — only if pool has cache devices
+    if has_l2arc:
+        l2_hit = seg_data.get("l2_hit_pct", {})
+        if l2_hit and l2_hit.get("mean", 0) > 0:
+            lines.extend(_format_markdown_metric_row("L2ARC Hit %", l2_hit, get_l2_hit_rating))
 
-    # L2ARC Throughput
-    l2_bytes = seg_data.get("l2_bytes_per_sec_mbs", {})
-    if l2_bytes and l2_bytes.get("mean", 0) > 0:
-        lines.extend(_format_markdown_metric_row("L2ARC Read (MB/s)", l2_bytes))
+        l2_bytes = seg_data.get("l2_bytes_per_sec_mbs", {})
+        if l2_bytes and l2_bytes.get("mean", 0) > 0:
+            lines.extend(_format_markdown_metric_row("L2ARC Read (MB/s)", l2_bytes))
 
     return lines
 
@@ -436,7 +445,7 @@ def _format_markdown_metric_row(
     return lines
 
 
-def _format_markdown_legend() -> List[str]:
+def _format_markdown_legend(has_l2arc: bool = False) -> List[str]:
     """ARC-specific legend for markdown."""
     lines: List[str] = []
     lines.append("### ARC Metrics Legend")
@@ -445,8 +454,9 @@ def _format_markdown_legend() -> List[str]:
     lines.append("|--------|------------|")
     lines.append("| **ARC Hit %** | Percentage of reads served from ARC memory cache (higher = better) |")
     lines.append("| **ARC Size** | Total ARC memory usage in GiB |")
-    lines.append("| **L2ARC Hit %** | Percentage of L2ARC lookups that were hits |")
-    lines.append("| **L2ARC Read** | Data read throughput from L2ARC device in MB/s |")
+    if has_l2arc:
+        lines.append("| **L2ARC Hit %** | Percentage of L2ARC lookups that were hits |")
+        lines.append("| **L2ARC Read** | Data read throughput from L2ARC device in MB/s |")
     lines.append("")
     lines.append("**ARC Hit % Rating:**")
     lines.append("")
@@ -456,5 +466,15 @@ def _format_markdown_legend() -> List[str]:
     lines.append("| Good | 85-95% | Majority of reads cached |")
     lines.append("| Variable | 70-85% | Moderate cache utilization |")
     lines.append("| Poor | < 70% | Frequent cache misses — consider tuning |")
+    if has_l2arc:
+        lines.append("")
+        lines.append("**L2ARC Hit % Rating:**")
+        lines.append("")
+        lines.append("| Rating | Threshold | Meaning |")
+        lines.append("|--------|-----------|---------|")
+        lines.append("| Excellent | ≥ 80% | High L2ARC cache effectiveness |")
+        lines.append("| Good | 60-80% | Moderate L2ARC utilization |")
+        lines.append("| Variable | 40-60% | L2ARC partially effective |")
+        lines.append("| Low | < 40% | L2ARC not contributing significantly |")
     lines.append("")
     return lines

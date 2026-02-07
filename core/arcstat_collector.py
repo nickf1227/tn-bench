@@ -54,6 +54,43 @@ ARCSTAT_FIELD_STRING = ",".join(ARCSTAT_FIELDS)
 
 
 # ═══════════════════════════════════════════════════════════════════════════
+# L2ARC Detection
+# ═══════════════════════════════════════════════════════════════════════════
+
+def detect_l2arc(pool_name: str) -> bool:
+    """
+    Check whether a pool has an L2ARC (cache) device.
+
+    Parses ``zpool status <pool>`` and looks for a ``cache`` vdev section.
+
+    Returns:
+        True if the pool has at least one cache device, False otherwise.
+    """
+    try:
+        result = subprocess.run(
+            ["zpool", "status", pool_name],
+            capture_output=True, text=True, timeout=10,
+        )
+        if result.returncode != 0:
+            return False
+
+        in_config = False
+        for line in result.stdout.splitlines():
+            stripped = line.strip()
+            # We're looking for the config section's "cache" keyword
+            if stripped.startswith("NAME") and "STATE" in stripped:
+                in_config = True
+                continue
+            if in_config and stripped == "cache":
+                return True
+
+        return False
+    except Exception as e:
+        print_warning(f"L2ARC detection failed for pool '{pool_name}': {e}")
+        return False
+
+
+# ═══════════════════════════════════════════════════════════════════════════
 # Unit Conversion
 # ═══════════════════════════════════════════════════════════════════════════
 
@@ -116,6 +153,7 @@ class ArcstatTelemetry:
     end_time_iso: Optional[str] = None
     warmup_iterations: int = 0
     cooldown_iterations: int = 0
+    has_l2arc: bool = False
     samples: List[ArcstatSample] = field(default_factory=list)
 
     def to_dict(self, sample_interval: int = 1) -> dict:
@@ -136,6 +174,7 @@ class ArcstatTelemetry:
             "duration_seconds": round(self.end_time - self.start_time, 2) if self.end_time else None,
             "warmup_iterations": self.warmup_iterations,
             "cooldown_iterations": self.cooldown_iterations,
+            "has_l2arc": self.has_l2arc,
             "total_samples_collected": len(self.samples),
             "sample_interval": sample_interval,
             "samples_in_output": len(downsampled),
@@ -167,14 +206,18 @@ class ArcstatCollector:
         telemetry = collector.stop(cooldown_iterations=3)
     """
 
-    def __init__(self, interval: int = 1):
+    def __init__(self, interval: int = 1, pool_name: str = ""):
         """
         Initialize the arcstat collector.
 
         Args:
             interval: Sampling interval in seconds (default: 1)
+            pool_name: Pool name — used to auto-detect L2ARC presence.
+                       If empty, L2ARC detection is skipped.
         """
         self.interval = interval
+        self.pool_name = pool_name
+        self.has_l2arc = False
         self.telemetry: Optional[ArcstatTelemetry] = None
         self._process: Optional[subprocess.Popen] = None
         self._thread: Optional[threading.Thread] = None
@@ -336,11 +379,20 @@ class ArcstatCollector:
         self._warmup_count = 0
         self._stop_event.clear()
 
+        # Detect L2ARC before starting collection
+        if self.pool_name:
+            self.has_l2arc = detect_l2arc(self.pool_name)
+            if self.has_l2arc:
+                print_info(f"L2ARC detected on pool '{self.pool_name}' — L2ARC metrics will be reported")
+            else:
+                print_info(f"No L2ARC on pool '{self.pool_name}' — L2ARC metrics will be omitted")
+
         start_time = time.time()
         self.telemetry = ArcstatTelemetry(
             start_time=start_time,
             start_time_iso=datetime.fromtimestamp(start_time).isoformat(),
             warmup_iterations=warmup_iterations,
+            has_l2arc=self.has_l2arc,
         )
 
         self._thread = threading.Thread(target=self._collection_loop, daemon=True)
@@ -515,6 +567,7 @@ def calculate_arcstat_summary(telemetry: ArcstatTelemetry) -> dict:
         "total_samples": len(samples),
         "read_phase_samples": len(read_samples),
         "duration_seconds": round(telemetry.end_time - telemetry.start_time, 2) if telemetry.end_time else None,
+        "has_l2arc": telemetry.has_l2arc,
         "all_samples": all_stats,
         "read_phase": read_stats,
         "per_segment_read": segment_stats,

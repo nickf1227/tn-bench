@@ -1110,6 +1110,7 @@ class ResultAnalyzer:
                 end_time_iso=arc_data.get("end_time_iso"),
                 warmup_iterations=arc_data.get("warmup_iterations", 0),
                 cooldown_iterations=arc_data.get("cooldown_iterations", 0),
+                has_l2arc=arc_data.get("has_l2arc", False),
             )
 
             for s in arc_data["samples"]:

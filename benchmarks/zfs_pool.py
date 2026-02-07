@@ -195,7 +195,10 @@ class ZFSPoolBenchmark(BenchmarkBase):
         
         # Initialize and start the arcstat collector (same interval as iostat)
         if ArcstatCollector:
-            self.arcstat_collector = ArcstatCollector(interval=self.zpool_iostat_interval)
+            self.arcstat_collector = ArcstatCollector(
+                interval=self.zpool_iostat_interval,
+                pool_name=self.pool_name,
+            )
             arcstat_started = self.arcstat_collector.start(
                 warmup_iterations=self.zpool_iostat_warmup
             )

@@ -20,7 +20,8 @@ from core.arcstat_collector import (
     ArcstatCollector,
     ArcstatSample,
     ArcstatTelemetry,
-    calculate_arcstat_summary
+    calculate_arcstat_summary,
+    detect_l2arc
 )
 
 
