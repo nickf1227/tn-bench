@@ -28,14 +28,22 @@ def cleanup_test_files(dataset_path, file_prefix, num_threads):
             os.remove(file_path)
 
 
-def run_single_iteration(threads, bytes_per_thread, block_size, file_prefix, dataset_path, iteration_num):
+def run_single_iteration(threads, bytes_per_thread, block_size, file_prefix, dataset_path, iteration_num,
+                         on_segment_change=None):
     """
     Run a single write/read iteration and cleanup.
+    
+    Args:
+        on_segment_change: Optional callback(label: str) invoked before each
+                          write/read phase starts so the telemetry collector can
+                          label the workload segment.
     
     Returns:
         tuple: (write_speed, read_speed, bytes_written)
     """
     # Write phase
+    if on_segment_change:
+        on_segment_change(f"{threads}T-write")
     print_info(f"Iteration {iteration_num}: Writing...")
     start_time = time.time()
     
@@ -59,6 +67,8 @@ def run_single_iteration(threads, bytes_per_thread, block_size, file_prefix, dat
     print_info(f"Iteration {iteration_num} write: {color_text(f'{write_speed:.2f} MB/s', 'YELLOW')}")
     
     # Read phase
+    if on_segment_change:
+        on_segment_change(f"{threads}T-read")
     print_info(f"Iteration {iteration_num}: Reading...")
     start_time = time.time()
     
@@ -168,6 +178,11 @@ class ZFSPoolBenchmark(BenchmarkBase):
             self.zpool_iostat_collector = None
             return self._run_benchmark_without_zpool_iostat()
         
+        # Build a segment-change callback so iostat samples get labelled
+        def _on_segment_change(label: str):
+            if self.zpool_iostat_collector:
+                self.zpool_iostat_collector.signal_segment_change(label)
+
         try:
             # Run the benchmark
             for threads in thread_counts:
@@ -186,7 +201,8 @@ class ZFSPoolBenchmark(BenchmarkBase):
                     
                     write_speed, read_speed, bytes_written = run_single_iteration(
                         threads, self.bytes_per_thread, self.block_size,
-                        self.file_prefix, self.dataset_path, iteration
+                        self.file_prefix, self.dataset_path, iteration,
+                        on_segment_change=_on_segment_change,
                     )
                     write_speeds.append(write_speed)
                     read_speeds.append(read_speed)
@@ -332,23 +348,41 @@ class ZFSPoolBenchmark(BenchmarkBase):
             self._print_zpool_iostat_summary()
     
     def _print_inline_telemetry_summary(self, escaped_pool_name: str):
-        """Print telemetry summary immediately after benchmark (inline version)."""
-        from core.zpool_iostat_collector import calculate_zpool_iostat_summary
-        
+        """Print telemetry summary immediately after benchmark (inline version, phase-aware)."""
+        from core.zpool_iostat_collector import calculate_zpool_iostat_summary, Phase
+
         print_section(f"Zpool Iostat Telemetry Summary for Pool: {escaped_pool_name}")
-        
+
         summary = calculate_zpool_iostat_summary(self.zpool_iostat_telemetry)
         if not summary:
             print_bullet("No telemetry data available")
             return
-        
+
         # Basic info
-        print_bullet(f"Total samples: {summary.get('total_samples', 0)}")
+        total = summary.get('total_samples', 0)
+        ss_count = summary.get('steady_state_samples', 0)
         duration = summary.get('duration_seconds', 0)
+        print_bullet(f"Total samples: {total}  |  Steady-state samples: {ss_count}")
         if duration:
             print_bullet(f"Duration: {duration:.2f} seconds")
-        
-        # Helper functions
+
+        # ── Phase Breakdown ──────────────────────────────────────────────
+        phase_det = summary.get('phase_detection', {})
+        breakdown = phase_det.get('breakdown', {})
+        if breakdown:
+            print("")
+            print_subheader("Phase Breakdown")
+            print(f"  {'Phase':<16} {'Samples':>8} {'Duration':>10} {'% of Total':>12}")
+            print(f"  {'-'*16} {'-'*8} {'-'*10} {'-'*12}")
+            for phase_name in [p.value for p in Phase]:
+                info = breakdown.get(phase_name, {})
+                cnt = info.get('sample_count', 0)
+                dur = info.get('duration_seconds', 0)
+                pct = info.get('percent_of_total', 0)
+                label = phase_name.replace('_', ' ').title()
+                print(f"  {label:<16} {cnt:>8} {dur:>9.1f}s {pct:>10.1f}%")
+
+        # ── Helper formatters ────────────────────────────────────────────
         def cv_rating(cv: float) -> str:
             if cv < 10:
                 return color_text("Excellent", "GREEN")
@@ -358,65 +392,75 @@ class ZFSPoolBenchmark(BenchmarkBase):
                 return color_text("Variable", "YELLOW")
             else:
                 return color_text("High Variance", "RED")
-        
-        # Wider columns to handle large values
+
         def format_row(name: str, stats: dict) -> str:
             if not stats:
-                return f"  {name:<18} {'N/A':>12} {'N/A':>12} {'N/A':>12} {'N/A':>10} {'N/A':<15}"
+                return f"  {name:<22} {'N/A':>12} {'N/A':>12} {'N/A':>12} {'N/A':>10} {'N/A':<15}"
             mean = stats.get('mean', 0)
             p99 = stats.get('p99', 0)
             std_dev = stats.get('std_dev', 0)
             cv = stats.get('cv_percent', 0)
-            return f"  {name:<18} {mean:>12.1f} {p99:>12.1f} {std_dev:>12.1f} {cv:>9.1f}% {cv_rating(cv):<15}"
-        
-        # IOPS Table
-        print("")
-        print_subheader("IOPS Statistics")
-        print(f"  {'Metric':<18} {'Mean':>12} {'P99':>12} {'Std Dev':>12} {'CV%':>10} {'Rating':<15}")
-        print(f"  {'-'*18} {'-'*12} {'-'*12} {'-'*12} {'-'*10} {'-'*15}")
-        
-        iops = summary.get('iops', {})
-        write_stats = iops.get('write_active') or iops.get('write_all')
-        read_stats = iops.get('read_active') or iops.get('read_all')
-        total_stats = iops.get('total_all')
-        
-        if write_stats:
-            print(format_row("Write", write_stats))
-        if read_stats:
-            print(format_row("Read", read_stats))
-        if total_stats:
-            print(format_row("Total", total_stats))
-        
-        # Bandwidth Table
-        print("")
-        print_subheader("Bandwidth (MB/s)")
-        print(f"  {'Metric':<18} {'Mean':>12} {'P99':>12} {'Std Dev':>12} {'CV%':>10} {'Rating':<15}")
-        print(f"  {'-'*18} {'-'*12} {'-'*12} {'-'*12} {'-'*10} {'-'*15}")
-        
-        bw = summary.get('bandwidth_mbps', {})
-        write_bw = bw.get('write_active') or bw.get('write_all')
-        read_bw = bw.get('read_active') or bw.get('read_all')
-        
-        if write_bw:
-            print(format_row("Write", write_bw))
-        if read_bw:
-            print(format_row("Read", read_bw))
-        
-        # Latency Table (if available)
-        latency = summary.get('latency_ms', {})
-        has_latency = any(latency.values())
-        
+            return f"  {name:<22} {mean:>12.1f} {p99:>12.1f} {std_dev:>12.1f} {cv:>9.1f}% {cv_rating(cv):<15}"
+
+        def print_stat_table(label: str, iops: dict, bw: dict):
+            print("")
+            print_subheader(f"IOPS — {label}")
+            print(f"  {'Metric':<22} {'Mean':>12} {'P99':>12} {'Std Dev':>12} {'CV%':>10} {'Rating':<15}")
+            print(f"  {'-'*22} {'-'*12} {'-'*12} {'-'*12} {'-'*10} {'-'*15}")
+            ws = iops.get('write_active') or iops.get('write_all')
+            rs = iops.get('read_active') or iops.get('read_all')
+            ts = iops.get('total_all')
+            if ws: print(format_row("Write", ws))
+            if rs: print(format_row("Read", rs))
+            if ts: print(format_row("Total", ts))
+
+            print("")
+            print_subheader(f"Bandwidth (MB/s) — {label}")
+            print(f"  {'Metric':<22} {'Mean':>12} {'P99':>12} {'Std Dev':>12} {'CV%':>10} {'Rating':<15}")
+            print(f"  {'-'*22} {'-'*12} {'-'*12} {'-'*12} {'-'*10} {'-'*15}")
+            wbw = bw.get('write_active') or bw.get('write_all')
+            rbw = bw.get('read_active') or bw.get('read_all')
+            if wbw: print(format_row("Write", wbw))
+            if rbw: print(format_row("Read", rbw))
+
+        # ── All-Samples stats ────────────────────────────────────────────
+        all_s = summary.get('all_samples', {})
+        if all_s:
+            print_stat_table("All Samples", all_s.get('iops', {}), all_s.get('bandwidth_mbps', {}))
+
+        # ── Steady-State stats ───────────────────────────────────────────
+        ss_s = summary.get('steady_state', {})
+        if ss_s:
+            print_stat_table("Steady-State Only", ss_s.get('iops', {}), ss_s.get('bandwidth_mbps', {}))
+
+        # ── Per-Segment Steady-State stats ───────────────────────────────
+        per_seg = summary.get('per_segment_steady_state', {})
+        if per_seg:
+            print("")
+            print_subheader("Per-Segment Steady-State IOPS")
+            print(f"  {'Segment':<22} {'Samples':>8} {'Mean IOPS':>12} {'CV%':>10} {'Rating':<15}")
+            print(f"  {'-'*22} {'-'*8} {'-'*12} {'-'*10} {'-'*15}")
+            for seg_label, seg_data in sorted(per_seg.items()):
+                iops_total = seg_data.get('iops', {}).get('total_all', {})
+                cnt = seg_data.get('sample_count', 0)
+                mean = iops_total.get('mean', 0)
+                cv = iops_total.get('cv_percent', 0)
+                print(f"  {seg_label:<22} {cnt:>8} {mean:>12.1f} {cv:>9.1f}% {cv_rating(cv):<15}")
+
+        # ── Latency (if available) ───────────────────────────────────────
+        latency = all_s.get('latency_ms', {}) if all_s else {}
+        has_latency = any(latency.values()) if latency else False
+
         if has_latency:
             print("")
             print_subheader("Latency (ms)")
-            print(f"  {'Metric':<18} {'Mean':>12} {'P99':>12} {'Std Dev':>12} {'CV%':>10} {'Rating':<15}")
-            print(f"  {'-'*18} {'-'*12} {'-'*12} {'-'*12} {'-'*10} {'-'*15}")
-            
+            print(f"  {'Metric':<22} {'Mean':>12} {'P99':>12} {'Std Dev':>12} {'CV%':>10} {'Rating':<15}")
+            print(f"  {'-'*22} {'-'*12} {'-'*12} {'-'*12} {'-'*10} {'-'*15}")
             if latency.get('total_wait_write'):
                 print(format_row("Write Wait", latency['total_wait_write']))
             if latency.get('total_wait_read'):
                 print(format_row("Read Wait", latency['total_wait_read']))
-        
+
         # Legend
         print("")
         print("  Legend:")
