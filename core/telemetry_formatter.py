@@ -126,7 +126,10 @@ class TelemetryFormatter:
         
         # Per-segment steady-state analysis (WRITE only, includes latency)
         self._format_per_segment_analysis(summary)
-        
+
+        # Definitions/legend for statistical measures
+        self._format_definitions()
+
         return "\n".join(self.lines)
     
     def _format_header(self, summary: Dict[str, Any], pool_name: str):
@@ -220,14 +223,14 @@ class TelemetryFormatter:
         """Format a single metric row with Mean, Median, P99, Std Dev, CV%."""
         if not stats:
             return
-        
+
         mean = stats.get('mean', 0)
         median = stats.get('median', 0)
         p99 = stats.get('p99', 0)
         std_dev = stats.get('std_dev', 0)
         cv = stats.get('cv_percent', 0)
         rating, color = get_cv_rating(cv)
-        
+
         if self.config.format == OutputFormat.CONSOLE:
             colored_rating = color_text(rating, color)
             # Compact format for console
@@ -238,7 +241,45 @@ class TelemetryFormatter:
             self._add(f"|--------|------|--------|-----|---------|-----|--------|")
             self._add(f"| {metric_name} | {mean:.1f} | {median:.1f} | {p99:.1f} | {std_dev:.1f} | {cv:.1f}% | {rating} |")
             self._add()
-    
+
+    def _format_definitions(self):
+        """Add definitions/legend for statistical measures."""
+        self._subheader("Legend")
+
+        if self.config.format == OutputFormat.CONSOLE:
+            self._add("  Statistical Measures:")
+            self._add("    • Mean:    Average of all samples")
+            self._add("    • Median:  Middle value (50th percentile), less affected by outliers")
+            self._add("    • P99:     99th percentile - 99% of samples fall below this value")
+            self._add("    • Std Dev: Standard deviation - measures spread/consistency")
+            self._add("    • CV%:     Coefficient of Variation (std dev / mean × 100) - normalized consistency")
+            self._add()
+            self._add("  Rating (based on CV%):")
+            self._add(f"    • {color_text('Excellent', 'GREEN')}:    < 10%  (highly consistent)")
+            self._add(f"    • {color_text('Good', 'CYAN')}:         10-20% (good consistency)")
+            self._add(f"    • {color_text('Variable', 'YELLOW')}:     20-30% (some variability)")
+            self._add(f"    • {color_text('High Variance', 'RED')}:  > 30%  (significant inconsistency)")
+        else:
+            self._add("**Statistical Measures:**")
+            self._add()
+            self._add("| Measure | Definition |")
+            self._add("|---------|------------|")
+            self._add("| **Mean** | Average of all samples |")
+            self._add("| **Median** | Middle value (50th percentile), less affected by outliers |")
+            self._add("| **P99** | 99th percentile - 99% of samples fall below this value |")
+            self._add("| **Std Dev** | Standard deviation - measures spread/consistency |")
+            self._add("| **CV%** | Coefficient of Variation (std dev / mean × 100) - normalized measure of consistency |")
+            self._add()
+            self._add("**Rating (based on CV%):**")
+            self._add()
+            self._add("| Rating | CV% Range | Description |")
+            self._add("|--------|-----------|-------------|")
+            self._add("| 🟢 Excellent | < 10% | Highly consistent |")
+            self._add("| 🔵 Good | 10-20% | Good consistency |")
+            self._add("| 🟡 Variable | 20-30% | Some variability |")
+            self._add("| 🔴 High Variance | > 30% | Significant inconsistency |")
+            self._add()
+
 # Convenience functions for common use cases
 
 def format_telemetry_console(summary: Dict[str, Any], pool_name: str) -> str:
