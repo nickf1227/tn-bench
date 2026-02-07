@@ -1,9 +1,64 @@
-# tn-bench v1.11
+# tn-bench v2.1
 
 ##  tn-bench is an OpenSource software script that benchmarks your system and collects various statistical information via the TrueNAS API. It creates a dataset in each of your pools during testing, consuming 20 GiB of space for each thread in your system.
 
+## 🆕 What's New in v2.1
+
+### Automatic Analytics
+- Post-benchmark analysis automatically identifies scaling patterns
+- Generates `_analytics.json` with structured performance data
+- Generates `_report.md` with human-readable markdown tables
+- Neutral data presentation — reports observations without judgment
+
+### Delta-Based Scaling Analysis
+- Tracks performance changes between thread count steps
+- Identifies optimal thread count for each pool
+- Shows thread efficiency (MB/s per thread at peak)
+- Highlights notable transitions (gains, losses, plateaus)
+
+### Per-Disk Pool Comparison
+- Compares individual disk performance to pool average
+- Shows variance percentage within each pool
+- Identifies outliers using % of pool max metric
+
+## Previous: What's New in v2.0
+
+### Modular Architecture
+
+TN-Bench v2.0 has been completely refactored into a modular architecture. While the user experience remains identical to v1.x, the underlying codebase is now organized into clean, maintainable modules:
+
+```
+tn-bench/
+├── truenas-bench.py          # Main coordinator (thin UI layer)
+├── core/                     # Core functionality
+│   ├── __init__.py          # System/pool/disk API calls
+│   ├── dataset.py           # Dataset lifecycle management
+│   ├── results.py           # JSON output handling
+│   ├── analytics.py         # Scaling analysis engine (v2.1)
+│   ├── report_generator.py  # Markdown report generation (v2.1)
+│   └── zpool_iostat_collector.py  # ZFS pool iostat telemetry (v2.1)
+├── benchmarks/              # Benchmark implementations
+│   ├── __init__.py          # Exports benchmark classes
+│   ├── base.py              # Abstract base class
+│   ├── zfs_pool.py          # ZFS pool write/read benchmark
+│   ├── disk_raw.py          # Individual disk read benchmark
+│   └── disk_enhanced.py     # Enhanced disk benchmark (v2.0)
+└── utils/                   # Common utilities
+    └── __init__.py          # Colors, formatting, print functions
+```
+
+**Benefits of this design:**
+- **Easier Maintenance**: Each component is isolated and testable
+- **Simple Extensibility**: New benchmarks can be added by inheriting from `BenchmarkBase`
+- **Clear Separation**: UI, core logic, and benchmarks are cleanly separated
+- **Reusable Components**: Core utilities can be shared across benchmarks
+
+See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed documentation on the modular design.
+
 ## Features
 
+- **Modular Architecture**: Clean separation between UI, core logic, and benchmarks
+- **Enhanced Disk Benchmarking**: Multiple test modes (serial, parallel, seek-stress) and configurable block sizes
 - Collects system information using TrueNAS API.
 - Benchmarks system performance using `dd` command.
 - Provides detailed information about system, pools, and disks.
@@ -13,13 +68,14 @@
 - Drive Writes Per Day (DWPD) calculation for pool benchmarks.
 - Colorized output for better readability.
 - JSON output with structured schema for sharing results.
+- **Extensible**: Easy to add new benchmark types via the `BenchmarkBase` class
 
 
 ### Running the Script is a simple git clone
 ### Please note, this script needs to be run as `root`. 
 
    ```
-   git clone -b monolithic-version-1.07 https://github.com/nickf1227/TN-Bench.git && cd TN-Bench && python3 truenas-bench.py
+   git clone -b tn-bench-2.1 https://github.com/nickf1227/tn-bench.git && cd tn-bench && python3 truenas-bench.py
    ```
 
 
@@ -46,6 +102,33 @@ Example of `arcstat -f time,hit%,dh%,ph%,mh% 10` running while the benchmark is 
 
 
 - **Disk Benchmark**: The script performs sequential read benchmarks on individual disks using `dd`. The read size is calculated as `min(system RAM, disk size)` to work around ARC caching. Data is read in 4K chunks to `/dev/null`, making this a 4K sequential read test. 4K was chosen because `ashift=12` for all recent ZFS pools created in TrueNAS. The number of iterations is configurable (default 2). Run-to-run variance is expected, particularly on SSDs, as data may end up in internal caches.
+
+### Enhanced Disk Benchmark (v2.0)
+
+TN-Bench v2.0 introduces an enhanced disk benchmark with multiple test modes and configurable block sizes:
+
+**Test Modes:**
+- **SERIAL** (default): Test disks one at a time
+  - Best for baseline performance measurements
+  - Minimal system impact
+  - Recommended for production systems
+  
+- **PARALLEL**: Test all disks simultaneously
+  - Stress tests storage controllers and backplanes
+  - Higher resource usage than serial mode
+  - Useful for identifying controller bottlenecks
+  
+- **SEEK_STRESS**: Multiple threads per disk
+  - Heavy stress on disk seek mechanisms
+  - Can saturate CPU cores
+  - May cause system instability on busy systems
+  - Not recommended for production use
+
+**Block Size Options:**
+- 4K (small random I/O)
+- 32K (medium I/O)  
+- 128K (large sequential)
+- 1M (very large sequential)
   
 - **Results**: The script displays the results for each run and the average speed. This should give you an idea of the impacts of various thread-counts (as a synthetic representation of client-counts) and the ZFS ARC caching mechanism. 
 
@@ -59,11 +142,35 @@ Example of `arcstat -f time,hit%,dh%,ph%,mh% 10` running while the benchmark is 
 - Results reflect mixed cache hit/miss scenarios, not neccesarily indicative of a real world workload.
 
 ### Resource Requirements
-| Resource Type          | Requirement                                  |
-|------------------------|---------------------------------------------|
-| Pool Test Space        | 20 GiB per thread per iteration             |
-| Thread Configurations  | 4 (1, cores÷4, cores÷2, cores)              |
-| Default Iterations     | 2 per configuration                         |
+| Resource Type          | Requirement                                  | Notes                                      |
+|------------------------|---------------------------------------------|--------------------------------------------|
+| Pool Test Space        | 20 GiB per thread                           | Space freed between iterations (v2.0+)     |
+| Thread Configurations  | 4 (1, cores÷4, cores÷2, cores)              | For ZFS pool benchmarks                    |
+| Default Iterations     | 2 per configuration                         | Configurable 1-100                         |
+| Disk Serial Mode       | Low impact                                  | Default, safe for production               |
+| Disk Parallel Mode     | Moderate controller load                    | All disks simultaneously                   |
+| Disk Seek-Stress Mode  | **High CPU usage** ⚠️                       | Multiple threads per disk, may saturate CPU |
+
+### ⚠️ Resource Allocation Warnings
+
+**SEEK_STRESS Mode:**
+- Uses multiple concurrent threads per disk (4 threads default)
+- Can saturate all CPU cores
+- May cause system instability on heavily loaded systems
+- **Not recommended for production systems**
+- Only use on dedicated test systems with no other workloads
+
+**PARALLEL Mode:**
+- Tests all disks simultaneously
+- Heavy load on storage controllers and backplanes
+- May impact other I/O operations
+- Use with caution on production systems
+
+**SERIAL Mode (Recommended):**
+- Tests one disk at a time
+- Minimal system impact
+- Safe for production use
+- Best for baseline performance measurements
 
 ### Execution Time
 - **Small all-flash systems**: ~10-30 minutes
@@ -83,11 +190,76 @@ Delete testing dataset fire/tn-bench? (yes/no): yes
 ![a1455ff8f352193cdadd373471d714d42b170ebb](https://github.com/user-attachments/assets/0e938607-b9c4-424b-a780-ad079901f5a5)
 
 
-## Out put file
+## Output Files
 
 `python3 truenas-bench.py [--output /root/my_results.json]`
 
-A shareable JSON file can be generated, we have an initial version 1.0 schema, with the intention of eventually adding new fields without breaking the existing structure. 
+TN-Bench generates three files for each benchmark run:
+
+| File | Suffix | Description |
+|------|--------|-------------|
+| Results | `.json` | Raw benchmark data with system info, pool benchmarks, and disk benchmarks |
+| Analytics | `_analytics.json` | Structured analysis of scaling patterns and per-disk performance |
+| Report | `_report.md` | Human-readable markdown report with tables and observations |
+
+### Example
+```bash
+python3 truenas-bench.py --output results.json
+```
+
+Generates:
+- `results.json` — Raw benchmark data
+- `results_analytics.json` — Scaling analysis and disk comparison
+- `results_report.md` — Markdown report for sharing
+
+## Analytics (v2.1+)
+
+TN-Bench automatically analyzes benchmark results to identify scaling patterns and performance characteristics:
+
+### What's Analyzed
+- **Thread scaling**: How performance changes as thread count increases
+- **Optimization points**: Thread count where peak performance occurs
+- **Transition deltas**: Speed changes between thread configurations
+- **Per-disk variance**: Individual drive performance relative to pool average
+
+### Key Metrics
+| Metric | Description |
+|--------|-------------|
+| Peak Speed | Maximum throughput achieved |
+| Optimal Threads | Thread count at peak performance |
+| Thread Efficiency | MB/s per thread at peak |
+| % of Pool Avg | Disk speed relative to pool mean |
+
+### Sample Analytics Output
+```json
+{
+  "pool_analyses": [{
+    "name": "tank",
+    "write_scaling": {
+      "peak_speed_mbps": 4465.7,
+      "optimal_threads": 16,
+      "thread_efficiency": 279.1,
+      "progression": [...],
+      "deltas": [...]
+    },
+    "read_scaling": { ... },
+    "observations": [
+      "Speed decreases from 16 to 32 threads"
+    ]
+  }],
+  "disk_comparison": {
+    "tank": {
+      "pool_average_mbps": 614.5,
+      "variance_pct": 0.3,
+      "disks": [...]
+    }
+  }
+}
+```
+
+The analytics engine uses neutral data presentation — it reports what it observes without making performance judgments. You draw the conclusions.
+
+## JSON Schema 
 
 ```
 {
