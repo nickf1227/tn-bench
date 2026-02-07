@@ -124,11 +124,8 @@ class TelemetryFormatter:
         # Header section
         self._format_header(summary, pool_name)
         
-        # Per-segment steady-state analysis (WRITE only)
+        # Per-segment steady-state analysis (WRITE only, includes latency)
         self._format_per_segment_analysis(summary)
-        
-        # Latency table
-        self._format_latency(summary)
         
         return "\n".join(self.lines)
     
@@ -172,23 +169,27 @@ class TelemetryFormatter:
             self._note("WRITE telemetry only — READ metrics excluded due to ZFS ARC cache interference, "
                       "which can artificially inflate read performance numbers.")
         
-        for seg_label, seg_data in sorted(per_seg.items()):
+        # Only show write phases, sorted by thread count
+        write_phases = [(label, data) for label, data in per_seg.items() if label.endswith('-write')]
+        for seg_label, seg_data in sorted(write_phases):
             self._format_segment(seg_label, seg_data)
         
         self._add()
     
     def _format_segment(self, seg_label: str, seg_data: Dict[str, Any]):
-        """Format a single segment (one thread count)."""
+        """Format a single segment (one thread count) with full stats."""
         cnt = seg_data.get('sample_count', 0)
         
-        # Get IOPS and bandwidth data
+        # Get IOPS, bandwidth, and latency data
         iops_data = seg_data.get('iops', {})
         write_iops = iops_data.get('write_all', {})
-        read_iops = iops_data.get('read_all', {}) if self.config.include_read_metrics else {}
         
         bw_data = seg_data.get('bandwidth_mbps', {})
         write_bw = bw_data.get('write_all', {})
-        read_bw = bw_data.get('read_all', {}) if self.config.include_read_metrics else {}
+        
+        # Get latency from the segment data if available
+        latency_data = seg_data.get('latency_ms', {})
+        write_latency = latency_data.get('total_wait_write', {})
         
         # Only show if we have meaningful write data
         if not write_iops or write_iops.get('mean', 0) < 100:
@@ -200,84 +201,44 @@ class TelemetryFormatter:
             self._add(f"  {bold_label} ({cnt} samples):")
         else:
             self._add(f"**{seg_label}** ({cnt} samples):")
+            self._add()
         
-        # Format WRITE stats (always shown)
-        wi_mean = write_iops.get('mean', 0)
-        wi_cv = write_iops.get('cv_percent', 0)
-        wb_mean = write_bw.get('mean', 0) if write_bw else 0
-        rating, color = get_cv_rating(wi_cv)
+        # Format IOPS stats with full detail
+        self._format_metric_row("IOPS", write_iops)
         
-        if self.config.format == OutputFormat.CONSOLE:
-            colored_rating = color_text(rating, color)
-            self._add(f"    Write: {wi_mean:>8.0f} IOPS ({wb_mean:>5.0f} MB/s) CV={wi_cv:>5.1f}% [{colored_rating}]")
-        else:
-            self._add(f"- **Write:** {wi_mean:,.0f} IOPS ({wb_mean:,.0f} MB/s) CV={wi_cv:.1f}% [{rating}]")
+        # Format Bandwidth stats with full detail
+        self._format_metric_row("Bandwidth (MB/s)", write_bw)
         
-        # Format READ stats (only if enabled, and with warning)
-        if self.config.include_read_metrics and read_iops and read_iops.get('mean', 0) > 100:
-            ri_mean = read_iops.get('mean', 0)
-            ri_cv = read_iops.get('cv_percent', 0)
-            rb_mean = read_bw.get('mean', 0) if read_bw else 0
-            rating, color = get_cv_rating(ri_cv)
-            
-            if self.config.format == OutputFormat.CONSOLE:
-                colored_rating = color_text(rating, color)
-                self._add(f"    Read:  {ri_mean:>8.0f} IOPS ({rb_mean:>5.0f} MB/s) CV={ri_cv:>5.1f}% [{colored_rating}] ⚠️ ARC")
-            else:
-                self._add(f"- **Read:** {ri_mean:,.0f} IOPS ({rb_mean:,.0f} MB/s) CV={ri_cv:.1f}% [{rating}] ⚠️ *ZFS ARC may inflate reads*")
+        # Format Latency stats with full detail (WRITE only)
+        if write_latency:
+            self._format_metric_row("Latency (ms)", write_latency)
         
         if self.config.format == OutputFormat.MARKDOWN:
             self._add()
     
-    def _format_latency(self, summary: Dict[str, Any]):
-        """Format latency table."""
-        all_s = summary.get('all_samples', {})
-        latency = all_s.get('latency_ms', {}) if all_s else {}
-        has_latency = any(latency.values()) if latency else False
-        
-        if not has_latency:
+    def _format_metric_row(self, metric_name: str, stats: Dict[str, Any]):
+        """Format a single metric row with Mean, Median, P99, Std Dev, CV%."""
+        if not stats:
             return
         
-        self._subheader("Latency (ms)")
+        mean = stats.get('mean', 0)
+        median = stats.get('median', 0)
+        p99 = stats.get('p99', 0)
+        std_dev = stats.get('std_dev', 0)
+        cv = stats.get('cv_percent', 0)
+        rating, color = get_cv_rating(cv)
         
         if self.config.format == OutputFormat.CONSOLE:
-            # Console: compact table
-            self._add(f"  {'Metric':<22} {'Mean':>12} {'P99':>12} {'Std Dev':>12} {'CV%':>10} {'Rating':<15}")
-            self._add(f"  {'-'*22} {'-'*12} {'-'*12} {'-'*12} {'-'*10} {'-'*15}")
-            
-            for metric_name, metric_key in [("Write Wait", "total_wait_write"), ("Read Wait", "total_wait_read")]:
-                stats = latency.get(metric_key)
-                if stats:
-                    mean = stats.get('mean', 0)
-                    p99 = stats.get('p99', 0)
-                    std_dev = stats.get('std_dev', 0)
-                    cv = stats.get('cv_percent', 0)
-                    rating, color = get_cv_rating(cv)
-                    colored_rating = color_text(rating, color)
-                    self._add(f"  {metric_name:<22} {mean:>12.1f} {p99:>12.1f} {std_dev:>12.1f} {cv:>9.1f}% {colored_rating:<15}")
-            
-            self._add()
-            self._add("  Legend: Mean = Average | P99 = 99th percentile | CV% = Consistency")
-            self._add(f"    {color_text('<10% Excellent', 'GREEN')} | {color_text('10-20% Good', 'CYAN')} | {color_text('20-30% Variable', 'YELLOW')} | {color_text('>30% High Var', 'RED')}")
+            colored_rating = color_text(rating, color)
+            # Compact format for console
+            self._add(f"    {metric_name:<20} Mean={mean:>10.1f}  Median={median:>10.1f}  P99={p99:>10.1f}  Std={std_dev:>10.1f}  CV={cv:>6.1f}% [{colored_rating}]")
         else:
-            # Markdown: proper table
-            self._add("| Metric | Mean | P99 | Std Dev | CV% | Rating |")
-            self._add("|--------|------|-----|---------|-----|--------|")
-            
-            for metric_name, metric_key in [("Write Wait", "total_wait_write"), ("Read Wait", "total_wait_read")]:
-                stats = latency.get(metric_key)
-                if stats:
-                    mean = stats.get('mean', 0)
-                    p99 = stats.get('p99', 0)
-                    std_dev = stats.get('std_dev', 0)
-                    cv = stats.get('cv_percent', 0)
-                    rating, _ = get_cv_rating(cv)
-                    self._add(f"| {metric_name} | {mean:.1f} | {p99:.1f} | {std_dev:.1f} | {cv:.1f}% | {rating} |")
-            
+            # Markdown table format
+            self._add(f"| Metric | Mean | Median | P99 | Std Dev | CV% | Rating |")
+            self._add(f"|--------|------|--------|-----|---------|-----|--------|")
+            self._add(f"| {metric_name} | {mean:.1f} | {median:.1f} | {p99:.1f} | {std_dev:.1f} | {cv:.1f}% | {rating} |")
             self._add()
-            self._add("*CV% (Coefficient of Variation): <10% Excellent, 10-20% Good, 20-30% Variable, >30% High Variance*")
-
-
+    
 # Convenience functions for common use cases
 
 def format_telemetry_console(summary: Dict[str, Any], pool_name: str) -> str:
