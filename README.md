@@ -21,6 +21,19 @@
 - Shows variance percentage within each pool
 - Identifies outliers using % of pool max metric
 
+### Unified Telemetry Formatter
+- Single source of truth for console UI and markdown reports
+- Console output is now a "live preview" of the report content
+- Consistent formatting, CV% ratings, and table layouts
+- Future changes only need to happen in one place
+
+### Codebase Audit & Cleanup
+- Consolidated disk benchmark modules (removed `disk_raw.py`)
+- Removed ~250 lines of dead/stale code
+- Unified duplicate formatting logic
+- Reduced total module count from 16 to 15
+- Fixed edge-case bug in error handling
+
 ## Previous: What's New in v2.0
 
 ### Modular Architecture
@@ -36,13 +49,13 @@ tn-bench/
 │   ├── results.py           # JSON output handling
 │   ├── analytics.py         # Scaling analysis engine (v2.1)
 │   ├── report_generator.py  # Markdown report generation (v2.1)
+│   ├── telemetry_formatter.py  # Unified console/markdown formatter (v2.1)
 │   └── zpool_iostat_collector.py  # ZFS pool iostat telemetry (v2.1)
 ├── benchmarks/              # Benchmark implementations
 │   ├── __init__.py          # Exports benchmark classes
 │   ├── base.py              # Abstract base class
 │   ├── zfs_pool.py          # ZFS pool write/read benchmark
-│   ├── disk_raw.py          # Individual disk read benchmark
-│   └── disk_enhanced.py     # Enhanced disk benchmark (v2.0)
+│   └── disk_enhanced.py     # Individual disk benchmark (v2.0)
 └── utils/                   # Common utilities
     └── __init__.py          # Colors, formatting, print functions
 ```
