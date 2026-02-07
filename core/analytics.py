@@ -165,6 +165,7 @@ class SystemAnalysis:
     pool_analyses: List[PoolAnalysis] = field(default_factory=list)
     disk_comparison: Dict[str, Any] = field(default_factory=dict)
     telemetry_analyses: List[TelemetryPoolAnalysis] = field(default_factory=list)
+    arcstat_analyses: List[Dict[str, Any]] = field(default_factory=list)
 
     def to_dict(self) -> Dict[str, Any]:
         return {
@@ -182,6 +183,7 @@ class SystemAnalysis:
             ],
             "disk_comparison": self.disk_comparison,
             "telemetry_analyses": [ta.to_dict() for ta in self.telemetry_analyses],
+            "arcstat_analyses": self.arcstat_analyses,
         }
 
 
@@ -1055,7 +1057,7 @@ class ResultAnalyzer:
         self.pool_analyses: List[PoolAnalysis] = []
 
     def analyze(self) -> SystemAnalysis:
-        """Run full analysis: scaling + telemetry."""
+        """Run full analysis: scaling + telemetry + arcstat."""
         # Scaling analysis
         for pool in self.results.get("pools", []):
             pa = self._analyze_pool(pool)
@@ -1063,15 +1065,88 @@ class ResultAnalyzer:
 
         disk_comparison = self._analyze_disks()
 
-        # Telemetry analysis
+        # Telemetry analysis (zpool iostat)
         telemetry_analyzer = TelemetryAnalyzer(self.results)
         telemetry_analyses = telemetry_analyzer.analyze()
+
+        # ARC statistics analysis
+        arcstat_analyses = self._analyze_arcstat()
 
         return SystemAnalysis(
             pool_analyses=self.pool_analyses,
             disk_comparison=disk_comparison,
             telemetry_analyses=telemetry_analyses,
+            arcstat_analyses=arcstat_analyses,
         )
+
+    def _analyze_arcstat(self) -> List[Dict[str, Any]]:
+        """
+        Analyze arcstat telemetry for all pools.
+
+        Uses calculate_arcstat_summary() from the arcstat collector module
+        to produce per-pool ARC cache analysis focused on READ phases.
+        """
+        analyses = []
+
+        try:
+            from core.arcstat_collector import (
+                ArcstatTelemetry, ArcstatSample, calculate_arcstat_summary
+            )
+        except ImportError:
+            return analyses
+
+        for pool in self.results.get("pools", []):
+            arc_data = pool.get("arcstat_telemetry")
+            if not arc_data or not arc_data.get("samples"):
+                continue
+
+            pool_name = pool.get("name", "unknown")
+
+            # Reconstruct ArcstatTelemetry from serialized JSON
+            telemetry = ArcstatTelemetry(
+                start_time=arc_data.get("start_time", 0),
+                start_time_iso=arc_data.get("start_time_iso", ""),
+                end_time=arc_data.get("end_time"),
+                end_time_iso=arc_data.get("end_time_iso"),
+                warmup_iterations=arc_data.get("warmup_iterations", 0),
+                cooldown_iterations=arc_data.get("cooldown_iterations", 0),
+            )
+
+            for s in arc_data["samples"]:
+                sample = ArcstatSample(
+                    timestamp=s.get("timestamp", 0),
+                    timestamp_iso=s.get("timestamp_iso", ""),
+                    arc_hit_pct=s.get("arc_hit_pct", 0),
+                    arc_miss_pct=s.get("arc_miss_pct", 0),
+                    arc_size_gib=s.get("arc_size_gib", 0),
+                    reads_per_sec=s.get("reads_per_sec", 0),
+                    hits_per_sec=s.get("hits_per_sec", 0),
+                    misses_per_sec=s.get("misses_per_sec", 0),
+                    demand_hit_pct=s.get("demand_hit_pct", 0),
+                    demand_miss_pct=s.get("demand_miss_pct", 0),
+                    prefetch_hit_pct=s.get("prefetch_hit_pct", 0),
+                    prefetch_miss_pct=s.get("prefetch_miss_pct", 0),
+                    mfu_size_pct=s.get("mfu_size_pct", 0),
+                    mru_size_pct=s.get("mru_size_pct", 0),
+                    mfu_hits_per_sec=s.get("mfu_hits_per_sec", 0),
+                    mru_hits_per_sec=s.get("mru_hits_per_sec", 0),
+                    l2_hit_pct=s.get("l2_hit_pct", 0),
+                    l2_size_gib=s.get("l2_size_gib", 0),
+                    l2_bytes_per_sec_mbs=s.get("l2_bytes_per_sec_mbs", 0),
+                    zfetch_hits_per_sec=s.get("zfetch_hits_per_sec", 0),
+                    zfetch_misses_per_sec=s.get("zfetch_misses_per_sec", 0),
+                    zfetch_issued_per_sec=s.get("zfetch_issued_per_sec", 0),
+                    zfetch_ahead_per_sec=s.get("zfetch_ahead_per_sec", 0),
+                    segment_label=s.get("segment_label", ""),
+                )
+                telemetry.samples.append(sample)
+
+            summary = calculate_arcstat_summary(telemetry)
+            summary["pool_name"] = pool_name
+            summary["duration_seconds"] = arc_data.get("duration_seconds")
+            analyses.append(summary)
+
+        return analyses
 
     def _analyze_pool(self, pool: Dict[str, Any]) -> PoolAnalysis:
         """Analyze a single pool's scaling behavior."""

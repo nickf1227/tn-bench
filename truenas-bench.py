@@ -351,6 +351,7 @@ def main():
             pool_bench_results = zfs_benchmark.run()
             total_bytes_written = pool_bench_results["total_bytes_written"]
             iostat_telemetry = pool_bench_results.get("zpool_iostat_telemetry")
+            arcstat_telemetry = pool_bench_results.get("arcstat_telemetry")
             
             pool_end_time = time.time()
             pool_duration = pool_end_time - pool_start_time
@@ -384,6 +385,8 @@ def main():
                     pool_entry["benchmark_duration_seconds"] = pool_duration
                     if iostat_telemetry:
                         pool_entry["zpool_iostat_telemetry"] = iostat_telemetry
+                    if arcstat_telemetry:
+                        pool_entry["arcstat_telemetry"] = arcstat_telemetry
                     break
             
             zfs_benchmark.cleanup()

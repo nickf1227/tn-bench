@@ -96,10 +96,10 @@ def run_single_iteration(threads, bytes_per_thread, block_size, file_prefix, dat
 
 
 class ZFSPoolBenchmark(BenchmarkBase):
-    """ZFS Pool sequential write/read benchmark with optional zpool iostat telemetry collection."""
+    """ZFS Pool sequential write/read benchmark with optional zpool iostat and arcstat telemetry collection."""
     
     name = "zfs_pool"
-    description = "ZFS Pool sequential write/read benchmark with varying thread counts and zpool iostat telemetry"
+    description = "ZFS Pool sequential write/read benchmark with varying thread counts, zpool iostat telemetry, and ARC statistics"
     
     def __init__(
         self,
@@ -108,6 +108,7 @@ class ZFSPoolBenchmark(BenchmarkBase):
         dataset_path,
         iterations=2,
         collect_zpool_iostat=True,
+        collect_arcstat=True,
         zpool_iostat_interval=1,
         zpool_iostat_warmup=3,
         zpool_iostat_cooldown=3
@@ -127,6 +128,11 @@ class ZFSPoolBenchmark(BenchmarkBase):
         self.zpool_iostat_cooldown = zpool_iostat_cooldown
         self.zpool_iostat_collector = None
         self.zpool_iostat_telemetry = None
+        
+        # Arcstat collection settings
+        self.collect_arcstat = collect_arcstat
+        self.arcstat_collector = None
+        self.arcstat_telemetry = None
     
     def validate(self) -> bool:
         """Check if dataset path exists and is writable."""
@@ -143,10 +149,10 @@ class ZFSPoolBenchmark(BenchmarkBase):
     
     def _run_benchmark_with_zpool_iostat(self):
         """
-        Run the benchmark with zpool iostat collection.
+        Run the benchmark with zpool iostat and arcstat collection.
         
         Returns:
-            dict: Benchmark results with zpool iostat telemetry
+            dict: Benchmark results with zpool iostat and arcstat telemetry
         """
         # Import here to avoid circular imports and allow running without collector
         try:
@@ -157,12 +163,21 @@ class ZFSPoolBenchmark(BenchmarkBase):
             print_info("Zpool iostat collector not available, running without telemetry")
             return self._run_benchmark_without_zpool_iostat()
         
+        # Try to import arcstat collector (optional — may not be available on all systems)
+        ArcstatCollector = None
+        if self.collect_arcstat:
+            try:
+                from core.arcstat_collector import ArcstatCollector as _ArcstatCollector
+                ArcstatCollector = _ArcstatCollector
+            except ImportError:
+                print_info("Arcstat collector not available, running without ARC telemetry")
+        
         escaped_pool_name = self.pool_name.replace(" ", "\\ ")
         thread_counts = [1, self.cores // 4, self.cores // 2, self.cores]
         results = []
         total_bytes_written = 0
         
-        # Initialize and start the collector
+        # Initialize and start the zpool iostat collector
         self.zpool_iostat_collector = ZpoolIostatCollector(
             pool_name=self.pool_name,
             interval=self.zpool_iostat_interval,
@@ -178,10 +193,22 @@ class ZFSPoolBenchmark(BenchmarkBase):
             self.zpool_iostat_collector = None
             return self._run_benchmark_without_zpool_iostat()
         
-        # Build a segment-change callback so iostat samples get labelled
+        # Initialize and start the arcstat collector (same interval as iostat)
+        if ArcstatCollector:
+            self.arcstat_collector = ArcstatCollector(interval=self.zpool_iostat_interval)
+            arcstat_started = self.arcstat_collector.start(
+                warmup_iterations=self.zpool_iostat_warmup
+            )
+            if not arcstat_started:
+                print_warning("Failed to start arcstat collector, continuing without ARC telemetry")
+                self.arcstat_collector = None
+        
+        # Build a segment-change callback so both collectors get labelled
         def _on_segment_change(label: str):
             if self.zpool_iostat_collector:
                 self.zpool_iostat_collector.signal_segment_change(label)
+            if self.arcstat_collector:
+                self.arcstat_collector.signal_segment_change(label)
 
         try:
             # Run the benchmark
@@ -231,9 +258,13 @@ class ZFSPoolBenchmark(BenchmarkBase):
             print_info("\nBenchmark interrupted by user")
             raise
         finally:
-            # Stop collector with cooldown
+            # Stop collectors with cooldown
             if self.zpool_iostat_collector:
                 self.zpool_iostat_telemetry = self.zpool_iostat_collector.stop(
+                    cooldown_iterations=self.zpool_iostat_cooldown
+                )
+            if self.arcstat_collector:
+                self.arcstat_telemetry = self.arcstat_collector.stop(
                     cooldown_iterations=self.zpool_iostat_cooldown
                 )
         
@@ -241,10 +272,15 @@ class ZFSPoolBenchmark(BenchmarkBase):
         if self.zpool_iostat_telemetry:
             self._print_inline_telemetry_summary(escaped_pool_name)
         
+        # Print arcstat summary if available
+        if self.arcstat_telemetry:
+            self._print_inline_arcstat_summary(escaped_pool_name)
+        
         return {
             "benchmark_results": results,
             "total_bytes_written": total_bytes_written,
-            "zpool_iostat_telemetry": self.zpool_iostat_telemetry.to_dict(sample_interval=5) if self.zpool_iostat_telemetry else None
+            "zpool_iostat_telemetry": self.zpool_iostat_telemetry.to_dict(sample_interval=5) if self.zpool_iostat_telemetry else None,
+            "arcstat_telemetry": self.arcstat_telemetry.to_dict(sample_interval=5) if self.arcstat_telemetry else None,
         }
     
     def _run_benchmark_without_zpool_iostat(self):
@@ -356,6 +392,21 @@ class ZFSPoolBenchmark(BenchmarkBase):
         summary = calculate_zpool_iostat_summary(self.zpool_iostat_telemetry)
         output = format_telemetry_for_console(summary, escaped_pool_name)
         print(output)
+
+    def _print_inline_arcstat_summary(self, escaped_pool_name: str):
+        """Print ARC statistics summary immediately after benchmark."""
+        try:
+            from core.arcstat_collector import calculate_arcstat_summary
+            from core.arcstat_formatter import format_arcstat_for_console
+
+            print_section(f"ARC Statistics Summary (READ Phase) for Pool: {escaped_pool_name}")
+            summary = calculate_arcstat_summary(self.arcstat_telemetry)
+            output = format_arcstat_for_console(summary, escaped_pool_name)
+            print(output)
+        except Exception as e:
+            print_warning(f"Error generating ARC summary: {e}")
+            if self.arcstat_telemetry:
+                print_info(f"Total arcstat samples collected: {len(self.arcstat_telemetry.samples)}")
 
     def _print_zpool_iostat_summary(self):
         """Print a comprehensive summary of the collected zpool iostat telemetry (delegates to inline)."""
