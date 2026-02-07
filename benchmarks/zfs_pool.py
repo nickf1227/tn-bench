@@ -28,12 +28,57 @@ def cleanup_test_files(dataset_path, file_prefix, num_threads):
             os.remove(file_path)
 
 
-def run_single_iteration(threads, bytes_per_thread, block_size, file_prefix, dataset_path, iteration_num,
-                         on_segment_change=None):
+def parse_block_size_to_bytes(block_size_str):
+    """
+    Convert a block size string (e.g., '1M', '128k', '16k') to bytes.
+    
+    Args:
+        block_size_str: Block size string with optional K/k/M/m suffix
+        
+    Returns:
+        int: Block size in bytes
+    """
+    s = block_size_str.strip().upper()
+    if s.endswith('K'):
+        return int(s[:-1]) * 1024
+    elif s.endswith('M'):
+        return int(s[:-1]) * 1024 * 1024
+    else:
+        return int(s)
+
+
+# Valid pool block size options: label -> dd/recordsize value
+POOL_BLOCK_SIZES = {
+    "1":  {"size": "16k",  "description": "16k  - Small blocks (metadata-heavy workloads)"},
+    "2":  {"size": "32k",  "description": "32k  - Small blocks"},
+    "3":  {"size": "64k",  "description": "64k  - Medium-small blocks"},
+    "4":  {"size": "128k", "description": "128k - Medium blocks (general purpose)"},
+    "5":  {"size": "256k", "description": "256k - Medium blocks"},
+    "6":  {"size": "512k", "description": "512k - Medium-large blocks"},
+    "7":  {"size": "1M",   "description": "1M   - Large blocks (default, sequential throughput)"},
+    "8":  {"size": "2M",   "description": "2M   - Large blocks"},
+    "9":  {"size": "4M",   "description": "4M   - Very large blocks"},
+    "10": {"size": "8M",   "description": "8M   - Very large blocks"},
+    "11": {"size": "16M",  "description": "16M  - Maximum block size"},
+}
+
+# Data written per thread (constant regardless of block size)
+BYTES_PER_THREAD = 20 * 1024 * 1024 * 1024  # 20 GiB
+
+
+def run_single_iteration(threads, blocks_per_thread, block_size, block_size_bytes, file_prefix,
+                         dataset_path, iteration_num, on_segment_change=None):
     """
     Run a single write/read iteration and cleanup.
     
     Args:
+        threads: Number of concurrent threads
+        blocks_per_thread: Number of blocks each thread writes (count for dd)
+        block_size: Block size string for dd (e.g., '1M', '128k')
+        block_size_bytes: Block size in bytes (for speed calculation)
+        file_prefix: Prefix for test files
+        dataset_path: Path to the test dataset
+        iteration_num: Current iteration number
         on_segment_change: Optional callback(label: str) invoked before each
                           write/read phase starts so the telemetry collector can
                           label the workload segment.
@@ -49,7 +94,7 @@ def run_single_iteration(threads, bytes_per_thread, block_size, file_prefix, dat
     
     threads_list = []
     for i in range(threads):
-        command = f"dd if=/dev/urandom of={dataset_path}/{file_prefix}{i}.dat bs={block_size} count={bytes_per_thread} status=none"
+        command = f"dd if=/dev/urandom of={dataset_path}/{file_prefix}{i}.dat bs={block_size} count={blocks_per_thread} status=none"
         thread = threading.Thread(target=run_dd_command, args=(command,))
         thread.start()
         threads_list.append(thread)
@@ -60,8 +105,7 @@ def run_single_iteration(threads, bytes_per_thread, block_size, file_prefix, dat
     end_time = time.time()
     total_time_taken = end_time - start_time
     
-    block_size_bytes = 1024 * 1024  # 1M
-    bytes_written = threads * bytes_per_thread * block_size_bytes
+    bytes_written = threads * blocks_per_thread * block_size_bytes
     write_speed = bytes_written / total_time_taken / (1024 * 1024)
     
     print_info(f"Iteration {iteration_num} write: {color_text(f'{write_speed:.2f} MB/s', 'YELLOW')}")
@@ -74,7 +118,7 @@ def run_single_iteration(threads, bytes_per_thread, block_size, file_prefix, dat
     
     threads_list = []
     for i in range(threads):
-        command = f"dd if={dataset_path}/{file_prefix}{i}.dat of=/dev/null bs={block_size} count={bytes_per_thread} status=none"
+        command = f"dd if={dataset_path}/{file_prefix}{i}.dat of=/dev/null bs={block_size} count={blocks_per_thread} status=none"
         thread = threading.Thread(target=run_dd_command, args=(command,))
         thread.start()
         threads_list.append(thread)
@@ -107,6 +151,7 @@ class ZFSPoolBenchmark(BenchmarkBase):
         cores,
         dataset_path,
         iterations=2,
+        block_size="1M",
         collect_zpool_iostat=True,
         collect_arcstat=True,
         zpool_iostat_interval=1,
@@ -117,8 +162,9 @@ class ZFSPoolBenchmark(BenchmarkBase):
         self.cores = cores
         self.dataset_path = dataset_path
         self.iterations = iterations
-        self.bytes_per_thread = 20480  # 20 GiB per thread
-        self.block_size = "1M"
+        self.block_size = block_size
+        self.block_size_bytes = parse_block_size_to_bytes(block_size)
+        self.blocks_per_thread = BYTES_PER_THREAD // self.block_size_bytes
         self.file_prefix = "file_"
         
         # Zpool iostat collection settings
@@ -230,9 +276,9 @@ class ZFSPoolBenchmark(BenchmarkBase):
                         self.zpool_iostat_collector.signal_benchmark_start()
                     
                     write_speed, read_speed, bytes_written = run_single_iteration(
-                        threads, self.bytes_per_thread, self.block_size,
-                        self.file_prefix, self.dataset_path, iteration,
-                        on_segment_change=_on_segment_change,
+                        threads, self.blocks_per_thread, self.block_size,
+                        self.block_size_bytes, self.file_prefix, self.dataset_path,
+                        iteration, on_segment_change=_on_segment_change,
                     )
                     write_speeds.append(write_speed)
                     read_speeds.append(read_speed)
@@ -309,8 +355,9 @@ class ZFSPoolBenchmark(BenchmarkBase):
             for iteration in range(1, self.iterations + 1):
                 print_info(f"--- Iteration {iteration} of {self.iterations} ---")
                 write_speed, read_speed, bytes_written = run_single_iteration(
-                    threads, self.bytes_per_thread, self.block_size,
-                    self.file_prefix, self.dataset_path, iteration
+                    threads, self.blocks_per_thread, self.block_size,
+                    self.block_size_bytes, self.file_prefix, self.dataset_path,
+                    iteration
                 )
                 write_speeds.append(write_speed)
                 read_speeds.append(read_speed)
@@ -373,14 +420,15 @@ class ZFSPoolBenchmark(BenchmarkBase):
             avg_read = result['average_read_speed']
             bytes_written = result['bytes_written']
             
+            bs_label = self.block_size
             for i, speed in enumerate(write_speeds):
-                print_bullet(f"1M Seq Write Run {i+1}: {color_text(f'{speed:.2f} MB/s', 'YELLOW')}")
-            print_bullet(f"1M Seq Write Avg: {color_text(f'{avg_write:.2f} MB/s', 'GREEN')}")
+                print_bullet(f"{bs_label} Seq Write Run {i+1}: {color_text(f'{speed:.2f} MB/s', 'YELLOW')}")
+            print_bullet(f"{bs_label} Seq Write Avg: {color_text(f'{avg_write:.2f} MB/s', 'GREEN')}")
             print_bullet(f"Total Written: {bytes_written/(1024**3):.2f} GiB")
             
             for i, speed in enumerate(read_speeds):
-                print_bullet(f"1M Seq Read Run {i+1}: {color_text(f'{speed:.2f} MB/s', 'YELLOW')}")
-            print_bullet(f"1M Seq Read Avg: {color_text(f'{avg_read:.2f} MB/s', 'GREEN')}")
+                print_bullet(f"{bs_label} Seq Read Run {i+1}: {color_text(f'{speed:.2f} MB/s', 'YELLOW')}")
+            print_bullet(f"{bs_label} Seq Read Avg: {color_text(f'{avg_read:.2f} MB/s', 'GREEN')}")
         
         # Print zpool iostat summary if available
         if self.zpool_iostat_telemetry:

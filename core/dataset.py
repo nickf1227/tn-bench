@@ -21,9 +21,14 @@ def get_datasets():
     return []
 
 
-def create_dataset(pool_name):
+def create_dataset(pool_name, recordsize="1M"):
     """
     Create a test dataset in the specified pool.
+    
+    Args:
+        pool_name: Name of the pool to create the dataset in.
+        recordsize: ZFS record size for the dataset (e.g., '1M', '128k').
+                    Must match the dd block size for optimal benchmark results.
     
     Returns:
         str: Mountpoint of the created dataset, or None if failed.
@@ -33,7 +38,7 @@ def create_dataset(pool_name):
     dataset_name = f"{escaped_pool_name}/tn-bench"
     dataset_config = {
         "name": dataset_name,
-        "recordsize": "1M",
+        "recordsize": recordsize,
         "compression": "OFF",
         "sync": "DISABLED"
     }

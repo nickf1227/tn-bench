@@ -28,7 +28,7 @@ from core.dataset import create_dataset, delete_dataset, validate_space
 from core.results import save_results_to_json
 from core.analytics import ResultAnalyzer
 from core.report_generator import generate_markdown_report
-from benchmarks import ZFSPoolBenchmark, EnhancedDiskBenchmark, BLOCK_SIZES
+from benchmarks import ZFSPoolBenchmark, EnhancedDiskBenchmark, BLOCK_SIZES, POOL_BLOCK_SIZES
 
 
 def get_user_confirmation():
@@ -204,6 +204,32 @@ def ask_disk_block_size():
             print_error("Invalid choice. Please enter 1, 2, 3, or 4")
 
 
+def ask_pool_block_size():
+    """Ask user for pool benchmark block size (synchronized with dataset recordsize)."""
+    print_header("Pool Block Size Selection")
+    print_info("Select the block size for pool testing:")
+    print_info("This sets both the dd block size and dataset record size.")
+    print()
+    
+    for key, info in POOL_BLOCK_SIZES.items():
+        print_bullet(f"{key:>2}. {info['description']}")
+    print()
+    print_info("Smaller blocks test metadata-heavy workloads and IOPS.")
+    print_info("Larger blocks test sequential throughput.")
+    print_info("1M is the default and matches prior tn-bench behavior.")
+    
+    while True:
+        response = input(color_text("\nEnter block size (1-11) [7]: ", "BOLD")).strip()
+        if not response or response == "7":
+            return POOL_BLOCK_SIZES["7"]["size"]  # Default: 1M
+        elif response in POOL_BLOCK_SIZES:
+            selected = POOL_BLOCK_SIZES[response]["size"]
+            print_success(f"Selected pool block size: {selected}")
+            return selected
+        else:
+            print_error("Invalid choice. Please enter a number between 1 and 11")
+
+
 def ask_seek_threads():
     """Ask user for number of threads in seek_stress mode."""
     print_header("Seek-Stress Thread Count")
@@ -281,6 +307,12 @@ def main():
     zfs_iterations = ask_iteration_count("ZFS Pool")
     benchmark_results["benchmark_config"]["zfs_iterations"] = zfs_iterations
     
+    # Ask about pool block size (only if running ZFS benchmarks)
+    pool_block_size = "1M"  # default
+    if zfs_iterations > 0:
+        pool_block_size = ask_pool_block_size()
+    benchmark_results["benchmark_config"]["pool_block_size"] = pool_block_size
+    
     # Ask about disk benchmark iterations and options
     disk_iterations = ask_iteration_count("Individual Disk")
     run_disk_bench = disk_iterations > 0
@@ -324,8 +356,8 @@ def main():
         pool_name = pool.get('name', 'N/A')
         pool_start_time = time.time()
         print_header(f"Testing Pool: {pool_name}")
-        print_info(f"Creating test dataset for pool: {pool_name}")
-        dataset_path = create_dataset(pool_name)
+        print_info(f"Creating test dataset for pool: {pool_name} (recordsize={pool_block_size})")
+        dataset_path = create_dataset(pool_name, recordsize=pool_block_size)
         
         if dataset_path:
             # Check available space
@@ -347,7 +379,7 @@ def main():
             print_success("Sufficient space available - proceeding with benchmarks")
             
             # Run ZFS pool benchmark using the modular benchmark class
-            zfs_benchmark = ZFSPoolBenchmark(pool_name, cores, dataset_path, zfs_iterations)
+            zfs_benchmark = ZFSPoolBenchmark(pool_name, cores, dataset_path, zfs_iterations, block_size=pool_block_size)
             pool_bench_results = zfs_benchmark.run()
             total_bytes_written = pool_bench_results["total_bytes_written"]
             iostat_telemetry = pool_bench_results.get("zpool_iostat_telemetry")
