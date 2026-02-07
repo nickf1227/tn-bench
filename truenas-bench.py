@@ -337,14 +337,12 @@ def main():
             print_info(f"Test iterations: {zfs_iterations} (space freed between iterations)")
             
             if not has_space:
-                print_warning(f"Insufficient space in dataset {pool_name}/tn-bench")
-                print_warning(f"Minimum required: {required_gib} GiB")
-                print_warning(f"Available:        {available_gib:.2f} GiB")
-                proceed = input(color_text("\nProceed anyway? (yes/no): ", "BOLD")).lower()
-                if proceed != 'yes':
-                    print_info(f"Skipping benchmarks for pool {pool_name}")
-                    delete_dataset(f"{pool_name}/tn-bench")
-                    continue
+                print_error(f"Insufficient space in dataset {pool_name}/tn-bench")
+                print_error(f"Minimum required: {required_gib} GiB")
+                print_error(f"Available:        {available_gib:.2f} GiB")
+                print_info(f"Skipping benchmarks for pool {pool_name}")
+                delete_dataset(f"{pool_name}/tn-bench")
+                continue
 
             print_success("Sufficient space available - proceeding with benchmarks")
             
