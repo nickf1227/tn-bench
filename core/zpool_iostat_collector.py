@@ -433,42 +433,144 @@ class ZpoolIostatCollectorWithContext:
         self.collector.signal_benchmark_end()
 
 
+def _calculate_stats(values: List[float]) -> dict:
+    """Calculate comprehensive statistics for a list of values."""
+    if not values:
+        return {}
+    
+    n = len(values)
+    sorted_vals = sorted(values)
+    
+    # Mean
+    mean = sum(values) / n
+    
+    # Median
+    mid = n // 2
+    median = sorted_vals[mid] if n % 2 else (sorted_vals[mid - 1] + sorted_vals[mid]) / 2
+    
+    # Percentiles
+    def percentile(p: float) -> float:
+        idx = (p / 100) * (n - 1)
+        lower = int(idx)
+        upper = min(lower + 1, n - 1)
+        frac = idx - lower
+        return sorted_vals[lower] + frac * (sorted_vals[upper] - sorted_vals[lower])
+    
+    p50 = percentile(50)
+    p90 = percentile(90)
+    p95 = percentile(95)
+    p99 = percentile(99)
+    
+    # Standard deviation
+    variance = sum((x - mean) ** 2 for x in values) / n
+    std_dev = variance ** 0.5
+    
+    # Coefficient of variation
+    cv_percent = (std_dev / mean * 100) if mean != 0 else 0
+    
+    return {
+        "count": n,
+        "mean": mean,
+        "median": median,
+        "min": sorted_vals[0],
+        "max": sorted_vals[-1],
+        "p50": p50,
+        "p90": p90,
+        "p95": p95,
+        "p99": p99,
+        "std_dev": std_dev,
+        "cv_percent": cv_percent
+    }
+
+
 def calculate_zpool_iostat_summary(telemetry: ZpoolIostatTelemetry) -> dict:
     """
-    Calculate summary statistics from zpool iostat telemetry data.
+    Calculate comprehensive summary statistics from zpool iostat telemetry data.
     
     Returns:
-        Dictionary with summary statistics
+        Dictionary with summary statistics including IOPS, bandwidth, and latency
     """
     if not telemetry or not telemetry.samples:
         return {}
         
     samples = telemetry.samples
     
-    def avg(values: List[float]) -> float:
-        return sum(values) / len(values) if values else 0
-        
-    def max_val(values: List[float]) -> float:
-        return max(values) if values else 0
-        
-    def min_val(values: List[float]) -> float:
-        return min(values) if values else 0
-    
+    # Extract raw values
     read_ops = [s.operations_read for s in samples]
     write_ops = [s.operations_write for s in samples]
+    total_ops = [r + w for r, w in zip(read_ops, write_ops)]
+    
+    # Bandwidth parsing (convert to MB/s)
+    def parse_bandwidth(bw_str: str) -> float:
+        """Parse bandwidth string to MB/s."""
+        if not bw_str or bw_str == "-":
+            return 0.0
+        try:
+            bw_str = bw_str.strip()
+            multipliers = {'K': 0.001, 'M': 1.0, 'G': 1000.0}
+            if bw_str[-1] in multipliers:
+                return float(bw_str[:-1]) * multipliers[bw_str[-1]]
+            return float(bw_str) / 1_000_000  # Assume bytes
+        except (ValueError, IndexError):
+            return 0.0
+    
+    read_bw = [parse_bandwidth(s.bandwidth_read) for s in samples]
+    write_bw = [parse_bandwidth(s.bandwidth_write) for s in samples]
+    
+    # Latency parsing (convert to ms)
+    def parse_latency(lat_str: str) -> float:
+        """Parse latency string to milliseconds."""
+        if not lat_str or lat_str == "-":
+            return 0.0
+        try:
+            lat_str = lat_str.strip()
+            if lat_str.endswith('ms'):
+                return float(lat_str[:-2])
+            elif lat_str.endswith('us'):
+                return float(lat_str[:-2]) / 1000.0
+            elif lat_str.endswith('s'):
+                return float(lat_str[:-1]) * 1000.0
+            return float(lat_str)
+        except (ValueError, IndexError):
+            return 0.0
+    
+    total_wait_read = [parse_latency(s.total_wait_read) for s in samples if parse_latency(s.total_wait_read) > 0]
+    total_wait_write = [parse_latency(s.total_wait_write) for s in samples if parse_latency(s.total_wait_write) > 0]
+    disk_wait_read = [parse_latency(s.disk_wait_read) for s in samples if parse_latency(s.disk_wait_read) > 0]
+    disk_wait_write = [parse_latency(s.disk_wait_write) for s in samples if parse_latency(s.disk_wait_write) > 0]
+    
+    # Separate active vs idle samples (idle = both read and write IOPS are 0)
+    active_samples = [(r, w, rb, wb) for r, w, rb, wb in zip(read_ops, write_ops, read_bw, write_bw) if r > 0 or w > 0]
+    if active_samples:
+        active_read_ops = [s[0] for s in active_samples]
+        active_write_ops = [s[1] for s in active_samples]
+        active_read_bw = [s[2] for s in active_samples]
+        active_write_bw = [s[3] for s in active_samples]
+    else:
+        active_read_ops, active_write_ops, active_read_bw, active_write_bw = [], [], [], []
     
     summary = {
         "pool_name": telemetry.pool_name,
         "total_samples": len(samples),
         "duration_seconds": round(telemetry.end_time - telemetry.start_time, 2) if telemetry.end_time else None,
-        "operations_per_second": {
-            "read_avg": round(avg(read_ops), 2),
-            "read_max": round(max_val(read_ops), 2),
-            "read_min": round(min_val(read_ops), 2),
-            "write_avg": round(avg(write_ops), 2),
-            "write_max": round(max_val(write_ops), 2),
-            "write_min": round(min_val(write_ops), 2),
-            "total_avg": round(avg(read_ops) + avg(write_ops), 2)
+        "iops": {
+            "read_all": _calculate_stats(read_ops),
+            "write_all": _calculate_stats(write_ops),
+            "total_all": _calculate_stats(total_ops),
+            "read_active": _calculate_stats(active_read_ops) if active_read_ops else None,
+            "write_active": _calculate_stats(active_write_ops) if active_write_ops else None,
+        },
+        "bandwidth_mbps": {
+            "read_all": _calculate_stats(read_bw),
+            "write_all": _calculate_stats(write_bw),
+            "read_active": _calculate_stats(active_read_bw) if active_read_bw else None,
+            "write_active": _calculate_stats(active_write_bw) if active_write_bw else None,
+        },
+        "latency_ms": {
+            "total_wait_read": _calculate_stats(total_wait_read) if total_wait_read else None,
+            "total_wait_write": _calculate_stats(total_wait_write) if total_wait_write else None,
+            "disk_wait_read": _calculate_stats(disk_wait_read) if disk_wait_read else None,
+            "disk_wait_write": _calculate_stats(disk_wait_write) if disk_wait_write else None,
         }
     }
     
