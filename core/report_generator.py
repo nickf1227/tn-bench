@@ -288,69 +288,147 @@ def _format_disk_section(disk_comparison: Dict[str, Any]) -> list:
 
 def _format_telemetry_section(ta: Dict[str, Any]) -> List[str]:
     """Format the complete telemetry analysis section for one pool."""
+    from core.telemetry_formatter import TelemetryFormatter
+    
     lines = []
     pool_name = ta.get("pool_name", "unknown")
 
     lines.append(f"## Telemetry: {pool_name}")
     lines.append("")
 
-    # ── Per-Phase Steady-State Analysis (PRIMARY) ──
-    # Only show WRITE metrics to avoid ZFS ARC confusion
-    phase_stats = ta.get("phase_stats", [])
-    if phase_stats:
-        lines.extend(_format_phase_section(phase_stats))
+    # Use unified formatter for core telemetry display (summary, per-thread analysis, latency)
+    # This ensures console and markdown share the same formatting logic
+    formatter = TelemetryFormatter(mode='markdown')
+    
+    # Convert analytics format to summary format expected by formatter
+    summary = _convert_analytics_to_summary(ta)
+    core_lines = formatter.format_telemetry(summary, pool_name)
+    if core_lines:
+        lines.extend(core_lines)
 
-    # ── Per-Phase Latency (secondary) ──
-    if phase_stats:
-        lines.extend(_format_phase_latency_section(phase_stats))
+    # ── Additional "Nerd Stats" (markdown-only) ──
+    # These sections provide detailed statistics beyond the core console preview
+    
+    # Sample Summary
+    sample_summary = ta.get("sample_summary", {})
+    if sample_summary:
+        lines.extend(_format_sample_summary_section(sample_summary))
 
-    # ── Sample Summary ──
-    summary = ta.get("sample_summary", {})
-    if summary:
-        lines.append("### Sample Summary")
-        lines.append("")
-        lines.append(f"| Metric | Count | % of Total |")
-        lines.append(f"|--------|------:|----------:|")
-        lines.append(f"| Total Samples | {summary.get('total_samples', 0)} | 100% |")
-        lines.append(
-            f"| Active Write | {summary.get('active_write_samples', 0)} "
-            f"| {summary.get('active_write_pct', 0)}% |"
-        )
-        lines.append(
-            f"| Active Read | {summary.get('active_read_samples', 0)} "
-            f"| {summary.get('active_read_pct', 0)}% |"
-        )
-        lines.append(
-            f"| Idle | {summary.get('idle_samples', 0)} "
-            f"| {summary.get('idle_pct', 0)}% |"
-        )
-        lines.append("")
-
-    # ── I/O Size Analysis ──
+    # I/O Size Analysis
     io_size = ta.get("io_size_kb", {})
     if io_size:
         lines.extend(_format_io_size_section(io_size))
 
-    # ── Anomaly Detection ──
+    # Anomaly Detection
     anomalies = ta.get("anomalies", [])
     anomaly_count = ta.get("anomaly_count", len(anomalies))
     lines.extend(_format_anomaly_section(anomalies, anomaly_count))
 
-    # ── Capacity ──
+    # Capacity
     cap = ta.get("capacity_gib", {})
     if cap:
-        lines.append("### Capacity")
-        lines.append("")
-        lines.append(
-            f"| Metric | GiB |"
-        )
-        lines.append(f"|--------|----:|")
-        lines.append(f"| Start | {cap.get('start', 0):.2f} |")
-        lines.append(f"| End | {cap.get('end', 0):.2f} |")
-        lines.append(f"| Peak | {cap.get('max', 0):.2f} |")
-        lines.append(f"| Min | {cap.get('min', 0):.2f} |")
-        lines.append("")
+        lines.extend(_format_capacity_section(cap))
 
+    return lines
+
+
+def _convert_analytics_to_summary(ta: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Convert analytics JSON format to summary format expected by TelemetryFormatter.
+    
+    The analytics format (from JSON) has a different structure than the
+    live telemetry format. This normalizes it for the unified formatter.
+    """
+    phase_stats = ta.get("phase_stats", [])
+    sample_summary = ta.get("sample_summary", {})
+    
+    # Build per_segment_steady_state from phase_stats
+    per_segment = {}
+    for ps in phase_stats:
+        label = ps.get("label")
+        if not label or ps.get("phase") == "idle":
+            continue
+        
+        # Convert phase_stats format to per_segment format
+        per_segment[label] = {
+            "sample_count": ps.get("duration_samples", 0),
+            "iops": {
+                "write_all": ps.get("write_iops", {})
+            },
+            "bandwidth_mbps": {
+                "write_all": ps.get("write_bandwidth_mbps", {})
+            }
+        }
+    
+    # Build all_samples with latency from phase_stats
+    all_samples = {}
+    if phase_stats:
+        # Aggregate latency across phases
+        write_latencies = []
+        read_latencies = []
+        for ps in phase_stats:
+            w_lat = ps.get("write_latency_ms", {})
+            r_lat = ps.get("read_latency_ms", {})
+            if w_lat:
+                write_latencies.append(w_lat)
+            if r_lat:
+                read_latencies.append(r_lat)
+        
+        # Use the first phase's latency as representative (or could aggregate)
+        latency_ms = {}
+        if write_latencies:
+            latency_ms["total_wait_write"] = write_latencies[0]
+        if read_latencies:
+            latency_ms["total_wait_read"] = read_latencies[0]
+        
+        if latency_ms:
+            all_samples["latency_ms"] = latency_ms
+    
+    return {
+        "total_samples": sample_summary.get("total_samples", 0),
+        "steady_state_samples": sample_summary.get("active_write_samples", 0) + sample_summary.get("active_read_samples", 0),
+        "duration_seconds": ta.get("duration_seconds", 0),
+        "per_segment_steady_state": per_segment,
+        "all_samples": all_samples
+    }
+
+
+def _format_sample_summary_section(summary: Dict[str, Any]) -> List[str]:
+    """Format the sample summary section (nerd stats)."""
+    lines = []
+    lines.append("### Sample Summary")
+    lines.append("")
+    lines.append(f"| Metric | Count | % of Total |")
+    lines.append(f"|--------|------:|----------:|")
+    lines.append(f"| Total Samples | {summary.get('total_samples', 0)} | 100% |")
+    lines.append(
+        f"| Active Write | {summary.get('active_write_samples', 0)} "
+        f"| {summary.get('active_write_pct', 0)}% |"
+    )
+    lines.append(
+        f"| Active Read | {summary.get('active_read_samples', 0)} "
+        f"| {summary.get('active_read_pct', 0)}% |"
+    )
+    lines.append(
+        f"| Idle | {summary.get('idle_samples', 0)} "
+        f"| {summary.get('idle_pct', 0)}% |"
+    )
+    lines.append("")
+    return lines
+
+
+def _format_capacity_section(cap: Dict[str, Any]) -> List[str]:
+    """Format the capacity section (nerd stats)."""
+    lines = []
+    lines.append("### Capacity")
+    lines.append("")
+    lines.append(f"| Metric | GiB |")
+    lines.append(f"|--------|----:|")
+    lines.append(f"| Start | {cap.get('start', 0):.2f} |")
+    lines.append(f"| End | {cap.get('end', 0):.2f} |")
+    lines.append(f"| Peak | {cap.get('max', 0):.2f} |")
+    lines.append(f"| Min | {cap.get('min', 0):.2f} |")
+    lines.append("")
     return lines
 
 
@@ -526,55 +604,6 @@ def _format_io_size_section(io_size: Dict[str, Any]) -> List[str]:
     return lines
 
 
-def _format_phase_section(phase_stats: List[Dict[str, Any]]) -> List[str]:
-    """Format phase detection results - WRITE metrics only to avoid ZFS ARC confusion."""
-    lines = []
-    lines.append("### Per-Thread-Count Steady-State Analysis")
-    lines.append("")
-    lines.append("WRITE telemetry only (READ excluded due to ZFS ARC cache interference).")
-    lines.append("")
-
-    # Filter to active phases with sufficient samples
-    active_phases = [
-        ps for ps in phase_stats
-        if ps.get("phase") != "idle" and ps.get("duration_samples", 0) >= 3
-    ]
-
-    if not active_phases:
-        lines.append("*No steady-state phases detected with sufficient samples (minimum 3).")
-        lines.append("")
-        return lines
-
-    # Display each phase with WRITE metrics only
-    for i, ps in enumerate(active_phases, 1):
-        phase_name = ps.get("phase", "unknown").upper()
-        dur = ps.get("duration_samples", 0)
-        label = ps.get("label", f"Phase-{i}")
-
-        # Get write metrics
-        w_iops = ps.get("write_iops", {})
-        w_bw = ps.get("write_bandwidth_mbps", {})
-
-        # Only show phases with actual write activity
-        if w_iops.get("count", 0) == 0 or w_iops.get("mean", 0) < 100:
-            continue
-
-        # Format the summary line
-        iops_mean = w_iops.get("mean", 0)
-        iops_cv = w_iops.get("cv_percent", 0)
-        bw_mean = w_bw.get("mean", 0) if w_bw.get("count", 0) > 0 else 0
-        rating = _cv_rating(iops_cv)
-
-        # Use label if available, otherwise phase name
-        display_label = label if label else f"{phase_name}-{i}"
-
-        lines.append(f"{display_label} ({dur} samples):")
-        lines.append(f"  Write: {iops_mean:,.0f} IOPS ({bw_mean:,.0f} MB/s) CV={iops_cv:5.1f}% [{rating}]")
-        lines.append("")
-
-    return lines
-
-
 def _cv_rating(cv: float) -> str:
     """Generate a consistency rating based on CV%."""
     if cv < 10:
@@ -585,45 +614,6 @@ def _cv_rating(cv: float) -> str:
         return "~ Variable"
     else:
         return "⚠ High Variance"
-
-
-def _format_phase_latency_section(phase_stats: List[Dict[str, Any]]) -> List[str]:
-    """Format per-phase latency analysis."""
-    lines = []
-    lines.append("### Latency (ms)")
-    lines.append("")
-    lines.append("Per-phase write latency analysis.")
-    lines.append("")
-    lines.append("| Phase | Samples | Mean | P99 | Std Dev | CV% | Rating |")
-    lines.append("|-------|--------:|-----:|----:|--------:|-----:|--------|")
-
-    # Filter to active phases with write latency data
-    active_phases = [
-        ps for ps in phase_stats
-        if ps.get("phase") != "idle" and ps.get("duration_samples", 0) >= 3
-    ]
-
-    for ps in active_phases:
-        label = ps.get("label", ps.get("phase", "unknown").upper())
-        dur = ps.get("duration_samples", 0)
-        w_lat = ps.get("write_latency_ms", {})
-
-        if w_lat.get("count", 0) == 0:
-            continue
-
-        mean_val = w_lat.get("mean", 0)
-        p99_val = w_lat.get("p99", 0)
-        std_val = w_lat.get("std_dev", 0)
-        cv = w_lat.get("cv_percent", 0)
-        rating = _cv_rating(cv)
-
-        lines.append(
-            f"| {label} | {dur} | {mean_val:.2f} | {p99_val:.2f} | "
-            f"{std_val:.2f} | {cv:.1f}% | {rating} |"
-        )
-
-    lines.append("")
-    return lines
 
 
 def _format_anomaly_section(anomalies: List[Dict[str, Any]], count: int) -> List[str]:
