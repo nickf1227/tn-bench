@@ -400,13 +400,13 @@ class ZpoolIostatCollector:
 
     def _build_command(self) -> List[str]:
         """Build the zpool iostat command."""
-        cmd = ["zpool", "iostat", "-H"]  # -H for scripted mode (no headers)
-
+        cmd = ["zpool", "iostat", "-H", "-y"]  # -H for scripted mode (no headers), -y to skip first report (stats since boot)
+        
         if self.extended_stats:
             cmd.append("-l")  # Include latency statistics
-
+            
         cmd.extend([self.pool_name, str(self.interval)])
-
+        
         return cmd
 
     def _parse_value_with_suffix(self, value: str) -> float:
