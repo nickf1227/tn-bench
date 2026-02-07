@@ -5,10 +5,9 @@ Enhanced disk benchmark - multiple test modes and block sizes.
 import subprocess
 import threading
 import time
-import statistics
 from benchmarks.base import BenchmarkBase
 from utils import (
-    print_info, print_success, print_header, print_section,
+    print_info, print_success, print_error, print_header, print_section,
     print_subheader, print_bullet, color_text, print_warning
 )
 

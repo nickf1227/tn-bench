@@ -433,136 +433,11 @@ def _format_capacity_section(cap: Dict[str, Any]) -> List[str]:
     return lines
 
 
-def _format_stats_row(label: str, stats: Dict[str, Any], unit: str = "") -> str:
-    """Format a single stats dict as a markdown table row."""
-    if not stats or stats.get("count", 0) == 0:
-        return ""
-    u = f" {unit}" if unit else ""
-    return (
-        f"| {label} "
-        f"| {stats.get('count', 0)} "
-        f"| {stats.get('mean', 0):,.1f}{u} "
-        f"| {stats.get('median', 0):,.1f}{u} "
-        f"| {stats.get('p99', 0):,.1f}{u} "
-        f"| {stats.get('min', 0):,.1f}{u} "
-        f"| {stats.get('max', 0):,.1f}{u} "
-        f"| {stats.get('std_dev', 0):,.1f} "
-        f"| {stats.get('cv_percent', 0):.1f}% |"
-    )
 
-
-def _format_iops_section(iops: Dict[str, Any]) -> List[str]:
-    """Format IOPS statistics."""
-    lines = []
-    lines.append("### IOPS")
-    lines.append("")
-    lines.append("| Metric | Samples | Mean | Median | P99 | Min | Max | Std Dev | CV |")
-    lines.append("|--------|--------:|-----:|-------:|----:|----:|----:|--------:|---:|")
-
-    # All samples
-    for key, label in [("write_ops", "Write (all)"), ("read_ops", "Read (all)"), ("total_ops", "Total (all)")]:
-        row = _format_stats_row(label, iops.get("all_samples", {}).get(key, {}))
-        if row:
-            lines.append(row)
-
-    # Active only
-    for key, label in [("write_ops", "Write (active)"), ("read_ops", "Read (active)")]:
-        row = _format_stats_row(label, iops.get("active_only", {}).get(key, {}))
-        if row:
-            lines.append(row)
-
-    lines.append("")
-    return lines
-
-
-def _format_bandwidth_section(bw: Dict[str, Any]) -> List[str]:
-    """Format bandwidth statistics."""
-    lines = []
-    lines.append("### Bandwidth (MB/s)")
-    lines.append("")
-    lines.append("| Metric | Samples | Mean | Median | P99 | Min | Max | Std Dev | CV |")
-    lines.append("|--------|--------:|-----:|-------:|----:|----:|----:|--------:|---:|")
-
-    for key, label in [("write", "Write (all)"), ("read", "Read (all)")]:
-        row = _format_stats_row(label, bw.get("all_samples", {}).get(key, {}))
-        if row:
-            lines.append(row)
-
-    for key, label in [("write", "Write (active)"), ("read", "Read (active)")]:
-        row = _format_stats_row(label, bw.get("active_only", {}).get(key, {}))
-        if row:
-            lines.append(row)
-
-    lines.append("")
-    return lines
-
-
-def _format_latency_section(lat: Dict[str, Any]) -> List[str]:
-    """Format latency statistics."""
-    lines = []
-    lines.append("### Latency (ms)")
-    lines.append("")
-    lines.append("| Metric | Samples | Mean | Median | P99 | Min | Max | Std Dev | CV |")
-    lines.append("|--------|--------:|-----:|-------:|----:|----:|----:|--------:|---:|")
-
-    # Total wait
-    for key, label in [("read", "Total Wait Read"), ("write", "Total Wait Write")]:
-        row = _format_stats_row(label, lat.get("total_wait", {}).get(key, {}))
-        if row:
-            lines.append(row)
-
-    # Disk wait
-    for key, label in [("read", "Disk Wait Read"), ("write", "Disk Wait Write")]:
-        row = _format_stats_row(label, lat.get("disk_wait", {}).get(key, {}))
-        if row:
-            lines.append(row)
-
-    # Active only
-    active = lat.get("active_only", {})
-    for key, label in [
-        ("total_wait_write", "Total Wait Write (active)"),
-        ("total_wait_read", "Total Wait Read (active)"),
-        ("disk_wait_read", "Disk Wait Read (active)"),
-        ("disk_wait_write", "Disk Wait Write (active)"),
-    ]:
-        row = _format_stats_row(label, active.get(key, {}))
-        if row:
-            lines.append(row)
-
-    lines.append("")
-    return lines
-
-
-def _format_queue_section(qd: Dict[str, Any]) -> List[str]:
-    """Format queue depth statistics."""
-    lines = []
-    lines.append("### Queue Depths (ms)")
-    lines.append("")
-    lines.append("| Metric | Samples | Mean | Median | P99 | Min | Max | Std Dev | CV |")
-    lines.append("|--------|--------:|-----:|-------:|----:|----:|----:|--------:|---:|")
-
-    for key, label in [
-        ("asyncq_wait_write", "Async Queue Write"),
-        ("asyncq_wait_read", "Async Queue Read"),
-        ("syncq_wait_write", "Sync Queue Write"),
-        ("syncq_wait_read", "Sync Queue Read"),
-    ]:
-        row = _format_stats_row(label, qd.get(key, {}))
-        if row:
-            lines.append(row)
-
-    # Active only
-    active = qd.get("active_only", {})
-    for key, label in [
-        ("asyncq_wait_write", "Async Queue Write (active)"),
-        ("syncq_wait_write", "Sync Queue Write (active)"),
-    ]:
-        row = _format_stats_row(label, active.get(key, {}))
-        if row:
-            lines.append(row)
-
-    lines.append("")
-    return lines
+# NOTE: _format_iops_section, _format_bandwidth_section, _format_latency_section,
+# _format_queue_section, _format_stats_row, and _cv_rating were removed in the
+# 2.1 audit. They were dead code — superseded by the unified TelemetryFormatter
+# in core/telemetry_formatter.py. See AUDIT_REPORT.md for details.
 
 
 def _format_io_size_section(io_size: Dict[str, Any]) -> List[str]:
@@ -603,18 +478,6 @@ def _format_io_size_section(io_size: Dict[str, Any]) -> List[str]:
         lines.append("")
 
     return lines
-
-
-def _cv_rating(cv: float) -> str:
-    """Generate a consistency rating based on CV%."""
-    if cv < 10:
-        return "✓ Excellent"
-    elif cv < 20:
-        return "✓ Good"
-    elif cv < 30:
-        return "~ Variable"
-    else:
-        return "⚠ High Variance"
 
 
 def _format_anomaly_section(anomalies: List[Dict[str, Any]], count: int) -> List[str]:

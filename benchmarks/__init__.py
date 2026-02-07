@@ -2,14 +2,17 @@
 TN-Bench Benchmarks Module
 
 Available benchmarks:
-- ZFSPoolBenchmark: ZFS pool sequential write/read
-- DiskBenchmark: Individual disk 4K sequential read (legacy)
-- EnhancedDiskBenchmark: Individual disk with multiple test modes and block sizes
+- ZFSPoolBenchmark: ZFS pool sequential write/read with zpool iostat telemetry
+- EnhancedDiskBenchmark: Individual disk benchmark with serial, parallel, and seek-stress modes
+
+Architecture note:
+  The original DiskBenchmark (disk_raw.py) was removed in the 2.1 audit.
+  EnhancedDiskBenchmark in serial mode with block_size="1" (4K) is a strict
+  superset of the old DiskBenchmark functionality.
 """
 
 from benchmarks.base import BenchmarkBase
 from benchmarks.zfs_pool import ZFSPoolBenchmark
-from benchmarks.disk_raw import DiskBenchmark
 from benchmarks.disk_enhanced import EnhancedDiskBenchmark, BLOCK_SIZES
 
-__all__ = ['BenchmarkBase', 'ZFSPoolBenchmark', 'DiskBenchmark', 'EnhancedDiskBenchmark', 'BLOCK_SIZES']
+__all__ = ['BenchmarkBase', 'ZFSPoolBenchmark', 'EnhancedDiskBenchmark', 'BLOCK_SIZES']

@@ -28,7 +28,7 @@ from core.dataset import create_dataset, delete_dataset, validate_space
 from core.results import save_results_to_json
 from core.analytics import ResultAnalyzer
 from core.report_generator import generate_markdown_report
-from benchmarks import ZFSPoolBenchmark, DiskBenchmark, EnhancedDiskBenchmark, BLOCK_SIZES
+from benchmarks import ZFSPoolBenchmark, EnhancedDiskBenchmark, BLOCK_SIZES
 
 
 def get_user_confirmation():
