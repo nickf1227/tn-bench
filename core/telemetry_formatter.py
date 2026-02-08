@@ -288,14 +288,39 @@ class TelemetryFormatter:
         self._format_metric_row("Bandwidth (MB/s)", write_bw)
 
         # Format Latency stats with full detail (WRITE only)
+        # Auto-scale unit: if mean < 1ms, display in μs for NVMe-class latencies
         if write_latency:
-            self._format_metric_row("Latency (ms)", write_latency)
+            latency_mean = write_latency.get('mean', 0)
+            if latency_mean > 0 and latency_mean < 1.0:
+                # Convert positional values from ms → μs for display
+                # but preserve cv_percent (it's a ratio, not a unit-dependent value)
+                scaled = {}
+                ratio_keys = {'cv_percent', 'count'}
+                for k, v in write_latency.items():
+                    if k in ratio_keys:
+                        scaled[k] = v
+                    elif isinstance(v, (int, float)):
+                        scaled[k] = v * 1000
+                    else:
+                        scaled[k] = v
+                self._format_metric_row("Latency (μs)", scaled, rating_stats_override=write_latency)
+            else:
+                self._format_metric_row("Latency (ms)", write_latency)
 
         if self.config.format == OutputFormat.MARKDOWN:
             self._add()
 
-    def _format_metric_row(self, metric_name: str, stats: Dict[str, Any]):
-        """Format a single metric row as a readable table with colorized labels and values."""
+    def _format_metric_row(self, metric_name: str, stats: Dict[str, Any],
+                           rating_stats_override: Dict[str, Any] = None):
+        """Format a single metric row as a readable table with colorized labels and values.
+        
+        Args:
+            metric_name: Display name for the metric (e.g. "Latency (μs)")
+            stats: Stats dict with values to display (may be unit-scaled)
+            rating_stats_override: If provided, use these values for rating
+                calculations instead of stats. Used when display values are
+                scaled (e.g. μs) but ratings should use original units (ms).
+        """
         if not stats:
             return
 
@@ -305,13 +330,19 @@ class TelemetryFormatter:
         std_dev = stats.get('std_dev', 0)
         cv = stats.get('cv_percent', 0)
 
-        # Get ratings for each metric
-        cv_rating, cv_color = get_cv_rating(cv)
-        p99_rating, p99_color = get_p99_rating(p99)
+        # Use override stats for ratings if provided (unit-scaling case)
+        rating_src = rating_stats_override or stats
+        rating_p99 = rating_src.get('p99', 0)
+        rating_std = rating_src.get('std_dev', 0)
+        rating_cv = rating_src.get('cv_percent', 0)
+
+        # Get ratings for each metric (always using original-unit values)
+        cv_rating, cv_color = get_cv_rating(rating_cv)
+        p99_rating, p99_color = get_p99_rating(rating_p99)
 
         # Determine metric type for std dev rating
-        metric_type = "latency" if "ms" in metric_name.lower() or "latency" in metric_name.lower() else "iops"
-        std_rating, std_color = get_std_dev_rating(std_dev, metric_type)
+        metric_type = "latency" if "latency" in metric_name.lower() else "iops"
+        std_rating, std_color = get_std_dev_rating(rating_std, metric_type)
 
         if self.config.format == OutputFormat.CONSOLE:
             # Colorized output: labels in cyan, values in white, ratings colored by rating

@@ -1,7 +1,7 @@
-# tn-bench 2.1 - Modular Architecture
+# tn-bench 2.2 - Modular Architecture
 
 ## Overview
-tn-bench uses a modular architecture with clean separation between UI, core functionality, and benchmark implementations. Version 2.1 adds analytics and zpool iostat telemetry collection.
+tn-bench uses a modular architecture with clean separation between UI, core functionality, and benchmark implementations. Version 2.2 adds ARC statistics (arcstat) telemetry and comprehensive zpool latency analytics.
 
 ## Directory Structure
 
@@ -12,15 +12,18 @@ tn-bench/
 │   ├── __init__.py              # System/pool/disk info, zpool iostat exports
 │   ├── dataset.py               # Dataset create/delete/validate
 │   ├── results.py               # JSON output formatting
-│   ├── analytics.py             # Neutral scaling analysis (v2.1)
-│   ├── report_generator.py      # Markdown report generation (v2.1)
-│   └── zpool_iostat_collector.py  # ZFS pool iostat telemetry (v2.1)
+│   ├── analytics.py             # Neutral scaling analysis
+│   ├── report_generator.py      # Markdown report generation
+│   ├── zpool_iostat_collector.py  # ZFS pool iostat telemetry
+│   ├── arcstat_collector.py     # ARC statistics telemetry (v2.2)
+│   ├── arcstat_formatter.py     # ARC console/markdown formatter (v2.2)
+│   └── telemetry_formatter.py   # Unified telemetry formatter
 ├── benchmarks/                  # Benchmark implementations
 │   ├── __init__.py              # Exports benchmark classes
 │   ├── base.py                  # Abstract BenchmarkBase class
 │   ├── zfs_pool.py              # ZFS pool write/read benchmark
 │   ├── disk_raw.py              # Individual disk read benchmark
-│   └── disk_enhanced.py         # Enhanced disk benchmark with modes (v2.1)
+│   └── disk_enhanced.py         # Enhanced disk benchmark with modes
 ├── utils/                       # Common utilities
 │   └── __init__.py              # Color, formatting, print helpers
 └── test_zpool_iostat_collector.py  # Tests for zpool iostat collector
@@ -54,7 +57,7 @@ tn-bench/
 
 ## Key Components
 
-### ZPool Iostat Collector (v2.1)
+### ZPool Iostat Collector
 
 Background telemetry collection during pool benchmarks:
 
@@ -73,7 +76,7 @@ Features:
 - Extended latency statistics (with `-l` flag)
 - Automatic process cleanup
 
-### Analytics Engine (v2.1)
+### Analytics Engine
 
 Neutral data presentation using dataclasses:
 
@@ -89,7 +92,7 @@ Outputs:
 - Disk comparison across pools
 - Neutral observations (no grades/opinions)
 
-### Report Generator (v2.1)
+### Report Generator
 
 Markdown report from analytics:
 
@@ -141,3 +144,4 @@ class MyBenchmark(BenchmarkBase):
 - **v1.11**: Monolithic single-file script
 - **v2.0**: Modular architecture, space optimization
 - **v2.1**: Analytics engine, zpool iostat collection, enhanced disk benchmark
+- **v2.2**: ARC statistics (arcstat) telemetry, L2ARC auto-detection, latency unit auto-scaling (μs for NVMe)

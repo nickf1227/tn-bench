@@ -1,0 +1,973 @@
+{
+  "pool_analyses": [
+    {
+      "name": "fire",
+      "write_scaling": {
+        "progression": [
+          {
+            "threads": 1,
+            "speed_mbps": 225.8,
+            "vs_single_thread": 1.0
+          },
+          {
+            "threads": 10,
+            "speed_mbps": 2039.1,
+            "vs_single_thread": 9.03
+          },
+          {
+            "threads": 20,
+            "speed_mbps": 2781.9,
+            "vs_single_thread": 12.32
+          },
+          {
+            "threads": 40,
+            "speed_mbps": 2756.2,
+            "vs_single_thread": 12.21
+          }
+        ],
+        "deltas": [
+          {
+            "from_threads": 1,
+            "to_threads": 10,
+            "delta_mbps": 1813.3,
+            "pct_change": 803.2
+          },
+          {
+            "from_threads": 10,
+            "to_threads": 20,
+            "delta_mbps": 742.8,
+            "pct_change": 36.4
+          },
+          {
+            "from_threads": 20,
+            "to_threads": 40,
+            "delta_mbps": -25.7,
+            "pct_change": -0.9
+          }
+        ],
+        "peak_speed_mbps": 2781.9,
+        "optimal_threads": 20,
+        "thread_efficiency": 139.1,
+        "positive_transitions": 2,
+        "negative_transitions": 1
+      },
+      "read_scaling": {
+        "progression": [
+          {
+            "threads": 1,
+            "speed_mbps": 2788.9,
+            "vs_single_thread": 1.0
+          },
+          {
+            "threads": 10,
+            "speed_mbps": 6513.1,
+            "vs_single_thread": 2.34
+          },
+          {
+            "threads": 20,
+            "speed_mbps": 6612.8,
+            "vs_single_thread": 2.37
+          },
+          {
+            "threads": 40,
+            "speed_mbps": 6621.8,
+            "vs_single_thread": 2.37
+          }
+        ],
+        "deltas": [
+          {
+            "from_threads": 1,
+            "to_threads": 10,
+            "delta_mbps": 3724.2,
+            "pct_change": 133.5
+          },
+          {
+            "from_threads": 10,
+            "to_threads": 20,
+            "delta_mbps": 99.7,
+            "pct_change": 1.5
+          },
+          {
+            "from_threads": 20,
+            "to_threads": 40,
+            "delta_mbps": 9.0,
+            "pct_change": 0.1
+          }
+        ],
+        "peak_speed_mbps": 6621.8,
+        "optimal_threads": 40,
+        "thread_efficiency": 165.5,
+        "positive_transitions": 3,
+        "negative_transitions": 0
+      },
+      "observations": [
+        {
+          "category": "read_scaling",
+          "description": "Diminishing returns above 10 threads",
+          "data": {
+            "from_threads": 10,
+            "to_threads": 20,
+            "delta_mbps": 99.7,
+            "pct_change": 1.5
+          }
+        },
+        {
+          "category": "read_scaling",
+          "description": "Diminishing returns above 20 threads",
+          "data": {
+            "from_threads": 20,
+            "to_threads": 40,
+            "delta_mbps": 9.0,
+            "pct_change": 0.1
+          }
+        }
+      ]
+    },
+    {
+      "name": "ice",
+      "write_scaling": {},
+      "read_scaling": {},
+      "observations": []
+    }
+  ],
+  "disk_comparison": {
+    "N/A": {
+      "disks": [
+        {
+          "disk": "sdan",
+          "model": "KINGSTON_SA400S37120G",
+          "speed_mbps": 0,
+          "pct_of_pool_avg": 0,
+          "pct_of_pool_max": 0
+        },
+        {
+          "disk": "sdb",
+          "model": "HUSMH842_CLAR200",
+          "speed_mbps": 0,
+          "pct_of_pool_avg": 0,
+          "pct_of_pool_max": 0
+        },
+        {
+          "disk": "sda",
+          "model": "HUSMH842_CLAR200",
+          "speed_mbps": 0,
+          "pct_of_pool_avg": 0,
+          "pct_of_pool_max": 0
+        },
+        {
+          "disk": "sdab",
+          "model": "HUH721010AL42C0",
+          "speed_mbps": 0,
+          "pct_of_pool_avg": 0,
+          "pct_of_pool_max": 0
+        },
+        {
+          "disk": "sdc",
+          "model": "HUH721010AL42C0",
+          "speed_mbps": 0,
+          "pct_of_pool_avg": 0,
+          "pct_of_pool_max": 0
+        }
+      ],
+      "pool_average_mbps": 0.0,
+      "pool_range_mbps": 0,
+      "variance_pct": 0
+    },
+    "fire": {
+      "disks": [
+        {
+          "disk": "nvme0n1",
+          "model": "INTEL SSDPE2KE016T8",
+          "speed_mbps": 0,
+          "pct_of_pool_avg": 0,
+          "pct_of_pool_max": 0
+        },
+        {
+          "disk": "nvme2n1",
+          "model": "INTEL SSDPE2KE016T8",
+          "speed_mbps": 0,
+          "pct_of_pool_avg": 0,
+          "pct_of_pool_max": 0
+        },
+        {
+          "disk": "nvme3n1",
+          "model": "SAMSUNG MZWLL1T6HEHP-00003",
+          "speed_mbps": 0,
+          "pct_of_pool_avg": 0,
+          "pct_of_pool_max": 0
+        },
+        {
+          "disk": "nvme1n1",
+          "model": "SAMSUNG MZWLL1T6HEHP-00003",
+          "speed_mbps": 0,
+          "pct_of_pool_avg": 0,
+          "pct_of_pool_max": 0
+        }
+      ],
+      "pool_average_mbps": 0.0,
+      "pool_range_mbps": 0,
+      "variance_pct": 0
+    },
+    "ice": {
+      "disks": [
+        {
+          "disk": "sdo",
+          "model": "HUS728T8TAL4204",
+          "speed_mbps": 0,
+          "pct_of_pool_avg": 0,
+          "pct_of_pool_max": 0
+        },
+        {
+          "disk": "sds",
+          "model": "HUS728T8TAL4204",
+          "speed_mbps": 0,
+          "pct_of_pool_avg": 0,
+          "pct_of_pool_max": 0
+        },
+        {
+          "disk": "sdz",
+          "model": "HUS728T8TAL4204",
+          "speed_mbps": 0,
+          "pct_of_pool_avg": 0,
+          "pct_of_pool_max": 0
+        },
+        {
+          "disk": "sdaa",
+          "model": "HUS728T8TAL4204",
+          "speed_mbps": 0,
+          "pct_of_pool_avg": 0,
+          "pct_of_pool_max": 0
+        },
+        {
+          "disk": "sdn",
+          "model": "HUS728T8TAL4204",
+          "speed_mbps": 0,
+          "pct_of_pool_avg": 0,
+          "pct_of_pool_max": 0
+        },
+        {
+          "disk": "sdv",
+          "model": "HUS728T8TAL4204",
+          "speed_mbps": 0,
+          "pct_of_pool_avg": 0,
+          "pct_of_pool_max": 0
+        },
+        {
+          "disk": "sdr",
+          "model": "HUS728T8TAL4204",
+          "speed_mbps": 0,
+          "pct_of_pool_avg": 0,
+          "pct_of_pool_max": 0
+        },
+        {
+          "disk": "sdt",
+          "model": "HUS728T8TAL4204",
+          "speed_mbps": 0,
+          "pct_of_pool_avg": 0,
+          "pct_of_pool_max": 0
+        },
+        {
+          "disk": "sdu",
+          "model": "HUS728T8TAL4204",
+          "speed_mbps": 0,
+          "pct_of_pool_avg": 0,
+          "pct_of_pool_max": 0
+        },
+        {
+          "disk": "sdw",
+          "model": "HUS728T8TAL4204",
+          "speed_mbps": 0,
+          "pct_of_pool_avg": 0,
+          "pct_of_pool_max": 0
+        },
+        {
+          "disk": "sdx",
+          "model": "HUS728T8TAL4204",
+          "speed_mbps": 0,
+          "pct_of_pool_avg": 0,
+          "pct_of_pool_max": 0
+        },
+        {
+          "disk": "sdy",
+          "model": "HUS728T8TAL4204",
+          "speed_mbps": 0,
+          "pct_of_pool_avg": 0,
+          "pct_of_pool_max": 0
+        },
+        {
+          "disk": "sdac",
+          "model": "HUS728T8TAL4204",
+          "speed_mbps": 0,
+          "pct_of_pool_avg": 0,
+          "pct_of_pool_max": 0
+        },
+        {
+          "disk": "sdal",
+          "model": "HUS728T8TAL4204",
+          "speed_mbps": 0,
+          "pct_of_pool_avg": 0,
+          "pct_of_pool_max": 0
+        },
+        {
+          "disk": "sdam",
+          "model": "HUS728T8TAL4204",
+          "speed_mbps": 0,
+          "pct_of_pool_avg": 0,
+          "pct_of_pool_max": 0
+        },
+        {
+          "disk": "sdad",
+          "model": "HUS728T8TAL4204",
+          "speed_mbps": 0,
+          "pct_of_pool_avg": 0,
+          "pct_of_pool_max": 0
+        },
+        {
+          "disk": "sdae",
+          "model": "HUS728T8TAL4204",
+          "speed_mbps": 0,
+          "pct_of_pool_avg": 0,
+          "pct_of_pool_max": 0
+        },
+        {
+          "disk": "sdaf",
+          "model": "HUS728T8TAL4204",
+          "speed_mbps": 0,
+          "pct_of_pool_avg": 0,
+          "pct_of_pool_max": 0
+        },
+        {
+          "disk": "sdag",
+          "model": "HUS728T8TAL4204",
+          "speed_mbps": 0,
+          "pct_of_pool_avg": 0,
+          "pct_of_pool_max": 0
+        },
+        {
+          "disk": "sdah",
+          "model": "HUS728T8TAL4204",
+          "speed_mbps": 0,
+          "pct_of_pool_avg": 0,
+          "pct_of_pool_max": 0
+        },
+        {
+          "disk": "sdai",
+          "model": "HUS728T8TAL4204",
+          "speed_mbps": 0,
+          "pct_of_pool_avg": 0,
+          "pct_of_pool_max": 0
+        },
+        {
+          "disk": "sdaj",
+          "model": "HUS728T8TAL4204",
+          "speed_mbps": 0,
+          "pct_of_pool_avg": 0,
+          "pct_of_pool_max": 0
+        },
+        {
+          "disk": "sdak",
+          "model": "HUS728T8TAL4204",
+          "speed_mbps": 0,
+          "pct_of_pool_avg": 0,
+          "pct_of_pool_max": 0
+        },
+        {
+          "disk": "sdd",
+          "model": "HUS728T8TAL4204",
+          "speed_mbps": 0,
+          "pct_of_pool_avg": 0,
+          "pct_of_pool_max": 0
+        },
+        {
+          "disk": "sde",
+          "model": "HUS728T8TAL4204",
+          "speed_mbps": 0,
+          "pct_of_pool_avg": 0,
+          "pct_of_pool_max": 0
+        },
+        {
+          "disk": "sdp",
+          "model": "HUS728T8TAL4204",
+          "speed_mbps": 0,
+          "pct_of_pool_avg": 0,
+          "pct_of_pool_max": 0
+        },
+        {
+          "disk": "sdi",
+          "model": "HUS728T8TAL4204",
+          "speed_mbps": 0,
+          "pct_of_pool_avg": 0,
+          "pct_of_pool_max": 0
+        },
+        {
+          "disk": "sdf",
+          "model": "HUS728T8TAL4204",
+          "speed_mbps": 0,
+          "pct_of_pool_avg": 0,
+          "pct_of_pool_max": 0
+        },
+        {
+          "disk": "sdl",
+          "model": "HUS728T8TAL4204",
+          "speed_mbps": 0,
+          "pct_of_pool_avg": 0,
+          "pct_of_pool_max": 0
+        },
+        {
+          "disk": "sdj",
+          "model": "HUS728T8TAL4204",
+          "speed_mbps": 0,
+          "pct_of_pool_avg": 0,
+          "pct_of_pool_max": 0
+        },
+        {
+          "disk": "sdh",
+          "model": "HUS728T8TAL4204",
+          "speed_mbps": 0,
+          "pct_of_pool_avg": 0,
+          "pct_of_pool_max": 0
+        },
+        {
+          "disk": "sdg",
+          "model": "HUS728T8TAL4204",
+          "speed_mbps": 0,
+          "pct_of_pool_avg": 0,
+          "pct_of_pool_max": 0
+        },
+        {
+          "disk": "sdm",
+          "model": "HUS728T8TAL4204",
+          "speed_mbps": 0,
+          "pct_of_pool_avg": 0,
+          "pct_of_pool_max": 0
+        },
+        {
+          "disk": "sdk",
+          "model": "HUS728T8TAL4204",
+          "speed_mbps": 0,
+          "pct_of_pool_avg": 0,
+          "pct_of_pool_max": 0
+        },
+        {
+          "disk": "sdq",
+          "model": "HUS728T8TAL4204",
+          "speed_mbps": 0,
+          "pct_of_pool_avg": 0,
+          "pct_of_pool_max": 0
+        }
+      ],
+      "pool_average_mbps": 0.0,
+      "pool_range_mbps": 0,
+      "variance_pct": 0
+    }
+  },
+  "telemetry_analyses": [
+    {
+      "pool_name": "fire",
+      "sample_summary": {
+        "total_samples": 173,
+        "active_write_samples": 173,
+        "active_read_samples": 173,
+        "idle_samples": 0,
+        "active_write_pct": 100.0,
+        "active_read_pct": 100.0,
+        "idle_pct": 0.0
+      },
+      "iops": {
+        "all_samples": {
+          "write_ops": {
+            "count": 173,
+            "mean": 7686.2139,
+            "median": 10200.0,
+            "min": 10.0,
+            "max": 16600.0,
+            "std_dev": 5753.2041,
+            "p50": 10200.0,
+            "p90": 13500.0,
+            "p95": 14700.0,
+            "p99": 16200.0,
+            "cv_percent": 74.85
+          },
+          "read_ops": {
+            "count": 173,
+            "mean": 5057.948,
+            "median": 75.0,
+            "min": 2.0,
+            "max": 20700.0,
+            "std_dev": 8535.1722,
+            "p50": 75.0,
+            "p90": 19500.0,
+            "p95": 20100.0,
+            "p99": 20600.0,
+            "cv_percent": 168.75
+          },
+          "total_ops": {
+            "count": 173,
+            "mean": 12744.1618,
+            "median": 12923.0,
+            "min": 17.0,
+            "max": 24230.0,
+            "std_dev": 5734.0788,
+            "p50": 12923.0,
+            "p90": 19678.0,
+            "p95": 20614.0,
+            "p99": 22300.0,
+            "cv_percent": 44.99
+          }
+        },
+        "active_only": {
+          "write_ops": {
+            "count": 173,
+            "mean": 7686.2139,
+            "median": 10200.0,
+            "min": 10.0,
+            "max": 16600.0,
+            "std_dev": 5753.2041,
+            "p50": 10200.0,
+            "p90": 13500.0,
+            "p95": 14700.0,
+            "p99": 16200.0,
+            "cv_percent": 74.85
+          },
+          "read_ops": {
+            "count": 173,
+            "mean": 5057.948,
+            "median": 75.0,
+            "min": 2.0,
+            "max": 20700.0,
+            "std_dev": 8535.1722,
+            "p50": 75.0,
+            "p90": 19500.0,
+            "p95": 20100.0,
+            "p99": 20600.0,
+            "cv_percent": 168.75
+          }
+        }
+      },
+      "bandwidth_mbps": {
+        "all_samples": {
+          "write": {
+            "count": 173,
+            "mean": 2210.9598,
+            "median": 3041.28,
+            "min": 0.1055,
+            "max": 4188.16,
+            "std_dev": 1721.8111,
+            "p50": 3041.28,
+            "p90": 4075.52,
+            "p95": 4126.72,
+            "p99": 4147.2,
+            "cv_percent": 77.88
+          },
+          "read": {
+            "count": 173,
+            "mean": 1674.3944,
+            "median": 0.6934,
+            "min": 0.0156,
+            "max": 6686.72,
+            "std_dev": 2872.9352,
+            "p50": 0.6934,
+            "p90": 6656.0,
+            "p95": 6666.24,
+            "p99": 6686.72,
+            "cv_percent": 171.58
+          }
+        },
+        "active_only": {
+          "write": {
+            "count": 173,
+            "mean": 2210.9598,
+            "median": 3041.28,
+            "min": 0.1055,
+            "max": 4188.16,
+            "std_dev": 1721.8111,
+            "p50": 3041.28,
+            "p90": 4075.52,
+            "p95": 4126.72,
+            "p99": 4147.2,
+            "cv_percent": 77.88
+          },
+          "read": {
+            "count": 173,
+            "mean": 1674.3944,
+            "median": 0.6934,
+            "min": 0.0156,
+            "max": 6686.72,
+            "std_dev": 2872.9352,
+            "p50": 0.6934,
+            "p90": 6656.0,
+            "p95": 6666.24,
+            "p99": 6686.72,
+            "cv_percent": 171.58
+          }
+        }
+      },
+      "latency_ms": {
+        "total_wait": {
+          "read": {
+            "count": 173,
+            "mean": 74.4346,
+            "median": 1.0,
+            "min": 0.098,
+            "max": 402.0,
+            "std_dev": 139.1323,
+            "p50": 1.0,
+            "p90": 384.0,
+            "p95": 400.0,
+            "p99": 401.0,
+            "cv_percent": 186.92
+          },
+          "write": {
+            "count": 173,
+            "mean": 73.5985,
+            "median": 0.001,
+            "min": 0.0009,
+            "max": 402.0,
+            "std_dev": 139.0384,
+            "p50": 0.001,
+            "p90": 377.0,
+            "p95": 401.0,
+            "p99": 402.0,
+            "cv_percent": 188.91
+          }
+        },
+        "disk_wait": {
+          "read": {
+            "count": 173,
+            "mean": 5.2397,
+            "median": 7.0,
+            "min": 0.051,
+            "max": 14.0,
+            "std_dev": 4.1345,
+            "p50": 7.0,
+            "p90": 10.0,
+            "p95": 11.0,
+            "p99": 13.0,
+            "cv_percent": 78.91
+          },
+          "write": {
+            "count": 173,
+            "mean": 0.1305,
+            "median": 0.003,
+            "min": 0.0008,
+            "max": 2.0,
+            "std_dev": 0.305,
+            "p50": 0.003,
+            "p90": 0.303,
+            "p95": 0.517,
+            "p99": 2.0,
+            "cv_percent": 233.68
+          }
+        },
+        "active_only": {
+          "total_wait_write": {
+            "count": 173,
+            "mean": 73.5985,
+            "median": 0.001,
+            "min": 0.0009,
+            "max": 402.0,
+            "std_dev": 139.0384,
+            "p50": 0.001,
+            "p90": 377.0,
+            "p95": 401.0,
+            "p99": 402.0,
+            "cv_percent": 188.91
+          },
+          "total_wait_read": {
+            "count": 173,
+            "mean": 74.4346,
+            "median": 1.0,
+            "min": 0.098,
+            "max": 402.0,
+            "std_dev": 139.1323,
+            "p50": 1.0,
+            "p90": 384.0,
+            "p95": 400.0,
+            "p99": 401.0,
+            "cv_percent": 186.92
+          },
+          "disk_wait_read": {
+            "count": 173,
+            "mean": 5.2397,
+            "median": 7.0,
+            "min": 0.051,
+            "max": 14.0,
+            "std_dev": 4.1345,
+            "p50": 7.0,
+            "p90": 10.0,
+            "p95": 11.0,
+            "p99": 13.0,
+            "cv_percent": 78.91
+          },
+          "disk_wait_write": {
+            "count": 173,
+            "mean": 0.1305,
+            "median": 0.003,
+            "min": 0.0008,
+            "max": 2.0,
+            "std_dev": 0.305,
+            "p50": 0.003,
+            "p90": 0.303,
+            "p95": 0.517,
+            "p99": 2.0,
+            "cv_percent": 233.68
+          }
+        }
+      },
+      "queue_depths": {
+        "asyncq_wait_write": {
+          "count": 125,
+          "mean": 5.7361,
+          "median": 6.0,
+          "min": 0.002,
+          "max": 13.0,
+          "std_dev": 2.7349,
+          "p50": 6.0,
+          "p90": 9.0,
+          "p95": 10.0,
+          "p99": 11.0,
+          "cv_percent": 47.68
+        },
+        "asyncq_wait_read": {
+          "count": 173,
+          "mean": 0.9462,
+          "median": 1.0,
+          "min": 0.047,
+          "max": 3.0,
+          "std_dev": 0.822,
+          "p50": 1.0,
+          "p90": 2.0,
+          "p95": 2.0,
+          "p99": 2.0,
+          "cv_percent": 86.88
+        },
+        "syncq_wait_write": {
+          "count": 53,
+          "mean": 243.6185,
+          "median": 200.0,
+          "min": 0.0008,
+          "max": 402.0,
+          "std_dev": 154.356,
+          "p50": 200.0,
+          "p90": 401.0,
+          "p95": 401.0,
+          "p99": 402.0,
+          "cv_percent": 63.36
+        },
+        "syncq_wait_read": {
+          "count": 173,
+          "mean": 0.8827,
+          "median": 1.0,
+          "min": 0.098,
+          "max": 2.0,
+          "std_dev": 0.3224,
+          "p50": 1.0,
+          "p90": 1.0,
+          "p95": 1.0,
+          "p99": 2.0,
+          "cv_percent": 36.53
+        },
+        "active_only": {
+          "asyncq_wait_write": {
+            "count": 125,
+            "mean": 5.7361,
+            "median": 6.0,
+            "min": 0.002,
+            "max": 13.0,
+            "std_dev": 2.7349,
+            "p50": 6.0,
+            "p90": 9.0,
+            "p95": 10.0,
+            "p99": 11.0,
+            "cv_percent": 47.68
+          },
+          "syncq_wait_write": {
+            "count": 53,
+            "mean": 243.6185,
+            "median": 200.0,
+            "min": 0.0008,
+            "max": 402.0,
+            "std_dev": 154.356,
+            "p50": 200.0,
+            "p90": 401.0,
+            "p95": 401.0,
+            "p99": 402.0,
+            "cv_percent": 63.36
+          }
+        }
+      },
+      "phases": [
+        {
+          "phase": "mixed",
+          "start_idx": 0,
+          "end_idx": 172,
+          "duration_samples": 173,
+          "start_time": "2026-02-07T13:59:45.781274",
+          "end_time": "2026-02-07T14:14:08.998059"
+        }
+      ],
+      "phase_stats": [
+        {
+          "phase": "mixed",
+          "duration_samples": 173,
+          "start_time": "2026-02-07T13:59:45.781274",
+          "end_time": "2026-02-07T14:14:08.998059",
+          "write_iops": {
+            "count": 173,
+            "mean": 7686.2139,
+            "median": 10200.0,
+            "min": 10.0,
+            "max": 16600.0,
+            "std_dev": 5753.2041,
+            "p50": 10200.0,
+            "p90": 13500.0,
+            "p95": 14700.0,
+            "p99": 16200.0,
+            "cv_percent": 74.85
+          },
+          "write_bandwidth_mbps": {
+            "count": 173,
+            "mean": 2210.9598,
+            "median": 3041.28,
+            "min": 0.1055,
+            "max": 4188.16,
+            "std_dev": 1721.8111,
+            "p50": 3041.28,
+            "p90": 4075.52,
+            "p95": 4126.72,
+            "p99": 4147.2,
+            "cv_percent": 77.88
+          },
+          "write_latency_ms": {
+            "count": 173,
+            "mean": 73.5985,
+            "median": 0.001,
+            "min": 0.0009,
+            "max": 402.0,
+            "std_dev": 139.0384,
+            "p50": 0.001,
+            "p90": 377.0,
+            "p95": 401.0,
+            "p99": 402.0,
+            "cv_percent": 188.91
+          },
+          "label": "1T-write",
+          "read_iops": {
+            "count": 173,
+            "mean": 5057.948,
+            "median": 75.0,
+            "min": 2.0,
+            "max": 20700.0,
+            "std_dev": 8535.1722,
+            "p50": 75.0,
+            "p90": 19500.0,
+            "p95": 20100.0,
+            "p99": 20600.0,
+            "cv_percent": 168.75
+          },
+          "read_bandwidth_mbps": {
+            "count": 173,
+            "mean": 1674.3944,
+            "median": 0.6934,
+            "min": 0.0156,
+            "max": 6686.72,
+            "std_dev": 2872.9352,
+            "p50": 0.6934,
+            "p90": 6656.0,
+            "p95": 6666.24,
+            "p99": 6686.72,
+            "cv_percent": 171.58
+          },
+          "read_latency_ms": {
+            "count": 173,
+            "mean": 74.4346,
+            "median": 1.0,
+            "min": 0.098,
+            "max": 402.0,
+            "std_dev": 139.1323,
+            "p50": 1.0,
+            "p90": 384.0,
+            "p95": 400.0,
+            "p99": 401.0,
+            "cv_percent": 186.92
+          }
+        }
+      ],
+      "anomalies": [],
+      "anomaly_count": 0,
+      "io_size_kb": {
+        "write_kb_per_op": {
+          "count": 173,
+          "mean": 201.4115,
+          "median": 279.9596,
+          "min": 5.4,
+          "max": 337.1891,
+          "std_dev": 136.2158,
+          "p50": 279.9596,
+          "p90": 320.2627,
+          "p95": 327.937,
+          "p99": 335.5443,
+          "cv_percent": 67.63
+        },
+        "read_kb_per_op": {
+          "count": 173,
+          "mean": 97.0818,
+          "median": 12.2188,
+          "min": 4.0413,
+          "max": 350.246,
+          "std_dev": 146.5473,
+          "p50": 12.2188,
+          "p90": 348.9876,
+          "p95": 349.5253,
+          "p99": 350.246,
+          "cv_percent": 150.95
+        }
+      },
+      "capacity_gib": {
+        "start": 1566.72,
+        "end": 2631.68,
+        "max": 2631.68,
+        "min": 1566.72
+      },
+      "observations": [
+        {
+          "category": "telemetry_write_consistency",
+          "description": "Write IOPS variable (CV=74.8%, mean=7,686, std_dev=5,753)",
+          "data": {
+            "cv_percent": 74.85,
+            "mean": 7686.2139
+          }
+        },
+        {
+          "category": "telemetry_read_consistency",
+          "description": "Read IOPS variable (CV=168.8%, mean=5,058, std_dev=8,535)",
+          "data": {
+            "cv_percent": 168.75,
+            "mean": 5057.948
+          }
+        },
+        {
+          "category": "telemetry_phases",
+          "description": "Detected 1 active phase segments: 1 mixed",
+          "data": null
+        },
+        {
+          "category": "telemetry_write_io_size",
+          "description": "Write average I/O size: 201 KB/op",
+          "data": {
+            "mean_kb": 201.4115,
+            "median_kb": 279.9596
+          }
+        },
+        {
+          "category": "telemetry_read_io_size",
+          "description": "Read average I/O size: 97 KB/op",
+          "data": {
+            "mean_kb": 97.0818,
+            "median_kb": 12.2188
+          }
+        }
+      ]
+    }
+  ]
+}

@@ -1,0 +1,1441 @@
+{
+  "pool_analyses": [
+    {
+      "name": "inferno",
+      "write_scaling": {
+        "progression": [
+          {
+            "threads": 1,
+            "speed_mbps": 334.5,
+            "vs_single_thread": 1.0
+          },
+          {
+            "threads": 8,
+            "speed_mbps": 2467.5,
+            "vs_single_thread": 7.38
+          },
+          {
+            "threads": 16,
+            "speed_mbps": 4214.0,
+            "vs_single_thread": 12.6
+          },
+          {
+            "threads": 32,
+            "speed_mbps": 4148.0,
+            "vs_single_thread": 12.4
+          }
+        ],
+        "deltas": [
+          {
+            "from_threads": 1,
+            "to_threads": 8,
+            "delta_mbps": 2133.1,
+            "pct_change": 637.8
+          },
+          {
+            "from_threads": 8,
+            "to_threads": 16,
+            "delta_mbps": 1746.5,
+            "pct_change": 70.8
+          },
+          {
+            "from_threads": 16,
+            "to_threads": 32,
+            "delta_mbps": -66.0,
+            "pct_change": -1.6
+          }
+        ],
+        "peak_speed_mbps": 4214.0,
+        "optimal_threads": 16,
+        "thread_efficiency": 263.4,
+        "positive_transitions": 2,
+        "negative_transitions": 1
+      },
+      "read_scaling": {
+        "progression": [
+          {
+            "threads": 1,
+            "speed_mbps": 6569.2,
+            "vs_single_thread": 1.0
+          },
+          {
+            "threads": 8,
+            "speed_mbps": 12731.0,
+            "vs_single_thread": 1.94
+          },
+          {
+            "threads": 16,
+            "speed_mbps": 12799.1,
+            "vs_single_thread": 1.95
+          },
+          {
+            "threads": 32,
+            "speed_mbps": 8098.1,
+            "vs_single_thread": 1.23
+          }
+        ],
+        "deltas": [
+          {
+            "from_threads": 1,
+            "to_threads": 8,
+            "delta_mbps": 6161.8,
+            "pct_change": 93.8
+          },
+          {
+            "from_threads": 8,
+            "to_threads": 16,
+            "delta_mbps": 68.2,
+            "pct_change": 0.5
+          },
+          {
+            "from_threads": 16,
+            "to_threads": 32,
+            "delta_mbps": -4701.0,
+            "pct_change": -36.7
+          }
+        ],
+        "peak_speed_mbps": 12799.1,
+        "optimal_threads": 16,
+        "thread_efficiency": 799.9,
+        "positive_transitions": 2,
+        "negative_transitions": 1
+      },
+      "observations": [
+        {
+          "category": "read_scaling",
+          "description": "Diminishing returns above 8 threads",
+          "data": {
+            "from_threads": 8,
+            "to_threads": 16,
+            "delta_mbps": 68.2,
+            "pct_change": 0.5
+          }
+        },
+        {
+          "category": "read_scaling",
+          "description": "Speed decreases from 16 to 32 threads",
+          "data": {
+            "from_threads": 16,
+            "to_threads": 32,
+            "delta_mbps": -4701.0,
+            "pct_change": -36.7
+          }
+        }
+      ]
+    },
+    {
+      "name": "plex",
+      "write_scaling": {},
+      "read_scaling": {},
+      "observations": []
+    }
+  ],
+  "disk_comparison": {
+    "inferno": {
+      "disks": [
+        {
+          "disk": "nvme4n1",
+          "model": "INTEL SSDPE21D960GA",
+          "speed_mbps": 0,
+          "pct_of_pool_avg": 0,
+          "pct_of_pool_max": 0
+        },
+        {
+          "disk": "nvme7n1",
+          "model": "INTEL SSDPE21D960GA",
+          "speed_mbps": 0,
+          "pct_of_pool_avg": 0,
+          "pct_of_pool_max": 0
+        },
+        {
+          "disk": "nvme6n1",
+          "model": "INTEL SSDPE21D960GA",
+          "speed_mbps": 0,
+          "pct_of_pool_avg": 0,
+          "pct_of_pool_max": 0
+        },
+        {
+          "disk": "nvme9n1",
+          "model": "INTEL SSDPE21D960GA",
+          "speed_mbps": 0,
+          "pct_of_pool_avg": 0,
+          "pct_of_pool_max": 0
+        },
+        {
+          "disk": "nvme5n1",
+          "model": "INTEL SSDPE21D960GA",
+          "speed_mbps": 0,
+          "pct_of_pool_avg": 0,
+          "pct_of_pool_max": 0
+        }
+      ],
+      "pool_average_mbps": 0.0,
+      "pool_range_mbps": 0,
+      "variance_pct": 0
+    },
+    "plex": {
+      "disks": [
+        {
+          "disk": "nvme0n1",
+          "model": "SAMSUNG MZVL2512HCJQ-00BL7",
+          "speed_mbps": 0,
+          "pct_of_pool_avg": 0,
+          "pct_of_pool_max": 0
+        },
+        {
+          "disk": "nvme1n1",
+          "model": "SAMSUNG MZVL2512HCJQ-00BL7",
+          "speed_mbps": 0,
+          "pct_of_pool_avg": 0,
+          "pct_of_pool_max": 0
+        },
+        {
+          "disk": "nvme2n1",
+          "model": "SAMSUNG MZVL2512HCJQ-00BL7",
+          "speed_mbps": 0,
+          "pct_of_pool_avg": 0,
+          "pct_of_pool_max": 0
+        },
+        {
+          "disk": "nvme3n1",
+          "model": "SAMSUNG MZVL2512HCJQ-00BL7",
+          "speed_mbps": 0,
+          "pct_of_pool_avg": 0,
+          "pct_of_pool_max": 0
+        }
+      ],
+      "pool_average_mbps": 0.0,
+      "pool_range_mbps": 0,
+      "variance_pct": 0
+    }
+  },
+  "telemetry_analyses": [
+    {
+      "pool_name": "inferno",
+      "sample_summary": {
+        "total_samples": 98,
+        "active_write_samples": 80,
+        "active_read_samples": 95,
+        "idle_samples": 0,
+        "active_write_pct": 81.6,
+        "active_read_pct": 96.9,
+        "idle_pct": 0.0
+      },
+      "iops": {
+        "all_samples": {
+          "write_ops": {
+            "count": 98,
+            "mean": 40509.2245,
+            "median": 15350.0,
+            "min": 0.0,
+            "max": 188000.0,
+            "std_dev": 57511.1645,
+            "p50": 15700.0,
+            "p90": 162000.0,
+            "p95": 173000.0,
+            "p99": 188000.0,
+            "cv_percent": 141.97
+          },
+          "read_ops": {
+            "count": 98,
+            "mean": 29918.3265,
+            "median": 42.5,
+            "min": 0.0,
+            "max": 225000.0,
+            "std_dev": 65368.488,
+            "p50": 43.0,
+            "p90": 163000.0,
+            "p95": 214000.0,
+            "p99": 225000.0,
+            "cv_percent": 218.49
+          },
+          "total_ops": {
+            "count": 98,
+            "mean": 70427.551,
+            "median": 33793.0,
+            "min": 2.0,
+            "max": 225000.0,
+            "std_dev": 72009.8271,
+            "p50": 33883.0,
+            "p90": 188042.0,
+            "p95": 214000.0,
+            "p99": 225000.0,
+            "cv_percent": 102.25
+          }
+        },
+        "active_only": {
+          "write_ops": {
+            "count": 80,
+            "mean": 49623.8,
+            "median": 24450.0,
+            "min": 4.0,
+            "max": 188000.0,
+            "std_dev": 60026.0294,
+            "p50": 24600.0,
+            "p90": 166000.0,
+            "p95": 175000.0,
+            "p99": 188000.0,
+            "cv_percent": 120.96
+          },
+          "read_ops": {
+            "count": 95,
+            "mean": 30863.1158,
+            "median": 43.0,
+            "min": 2.0,
+            "max": 225000.0,
+            "std_dev": 66181.1414,
+            "p50": 43.0,
+            "p90": 163000.0,
+            "p95": 214000.0,
+            "p99": 225000.0,
+            "cv_percent": 214.43
+          }
+        }
+      },
+      "bandwidth_mbps": {
+        "all_samples": {
+          "write": {
+            "count": 98,
+            "mean": 3037.2525,
+            "median": 3051.52,
+            "min": 0.0,
+            "max": 7710.72,
+            "std_dev": 2710.1096,
+            "p50": 3051.52,
+            "p90": 7178.24,
+            "p95": 7260.16,
+            "p99": 7710.72,
+            "cv_percent": 89.23
+          },
+          "read": {
+            "count": 98,
+            "mean": 2390.6134,
+            "median": 0.2227,
+            "min": 0.0,
+            "max": 12902.4,
+            "std_dev": 4659.4962,
+            "p50": 0.2246,
+            "p90": 12697.6,
+            "p95": 12902.4,
+            "p99": 12902.4,
+            "cv_percent": 194.91
+          }
+        },
+        "active_only": {
+          "write": {
+            "count": 80,
+            "mean": 3720.6343,
+            "median": 3128.32,
+            "min": 0.0468,
+            "max": 7710.72,
+            "std_dev": 2538.3794,
+            "p50": 3184.64,
+            "p90": 7198.72,
+            "p95": 7270.4,
+            "p99": 7710.72,
+            "cv_percent": 68.22
+          },
+          "read": {
+            "count": 95,
+            "mean": 2466.1065,
+            "median": 0.249,
+            "min": 0.0117,
+            "max": 12902.4,
+            "std_dev": 4713.3482,
+            "p50": 0.249,
+            "p90": 12697.6,
+            "p95": 12902.4,
+            "p99": 12902.4,
+            "cv_percent": 191.13
+          }
+        }
+      },
+      "latency_ms": {
+        "total_wait": {
+          "read": {
+            "count": 95,
+            "mean": 16.9764,
+            "median": 0.082,
+            "min": 0.024,
+            "max": 168.0,
+            "std_dev": 34.6587,
+            "p50": 0.082,
+            "p90": 58.0,
+            "p95": 92.0,
+            "p99": 168.0,
+            "cv_percent": 204.16
+          },
+          "write": {
+            "count": 95,
+            "mean": 21.4537,
+            "median": 0.001,
+            "min": 0.001,
+            "max": 197.0,
+            "std_dev": 46.8657,
+            "p50": 0.001,
+            "p90": 93.0,
+            "p95": 152.0,
+            "p99": 197.0,
+            "cv_percent": 218.45
+          }
+        },
+        "disk_wait": {
+          "read": {
+            "count": 80,
+            "mean": 28.5437,
+            "median": 7.0,
+            "min": 0.049,
+            "max": 991.0,
+            "std_dev": 115.9344,
+            "p50": 7.0,
+            "p90": 48.0,
+            "p95": 72.0,
+            "p99": 991.0,
+            "cv_percent": 406.16
+          },
+          "write": {
+            "count": 79,
+            "mean": 1.8148,
+            "median": 0.001,
+            "min": 0.0007,
+            "max": 141.0,
+            "std_dev": 15.8619,
+            "p50": 0.001,
+            "p90": 0.006,
+            "p95": 0.044,
+            "p99": 141.0,
+            "cv_percent": 874.01
+          }
+        },
+        "active_only": {
+          "total_wait_write": {
+            "count": 77,
+            "mean": 18.2349,
+            "median": 0.001,
+            "min": 0.001,
+            "max": 197.0,
+            "std_dev": 49.3727,
+            "p50": 0.001,
+            "p90": 93.0,
+            "p95": 190.0,
+            "p99": 197.0,
+            "cv_percent": 270.76
+          },
+          "total_wait_read": {
+            "count": 95,
+            "mean": 16.9764,
+            "median": 0.082,
+            "min": 0.024,
+            "max": 168.0,
+            "std_dev": 34.6587,
+            "p50": 0.082,
+            "p90": 58.0,
+            "p95": 92.0,
+            "p99": 168.0,
+            "cv_percent": 204.16
+          },
+          "disk_wait_read": {
+            "count": 77,
+            "mean": 29.461,
+            "median": 7.0,
+            "min": 0.049,
+            "max": 991.0,
+            "std_dev": 118.1039,
+            "p50": 7.0,
+            "p90": 48.0,
+            "p95": 72.0,
+            "p99": 991.0,
+            "cv_percent": 400.88
+          },
+          "disk_wait_write": {
+            "count": 79,
+            "mean": 1.8148,
+            "median": 0.001,
+            "min": 0.0007,
+            "max": 141.0,
+            "std_dev": 15.8619,
+            "p50": 0.001,
+            "p90": 0.006,
+            "p95": 0.044,
+            "p99": 141.0,
+            "cv_percent": 874.01
+          }
+        }
+      },
+      "queue_depths": {
+        "asyncq_wait_write": {
+          "count": 68,
+          "mean": 33.4559,
+          "median": 7.0,
+          "min": 2.0,
+          "max": 995.0,
+          "std_dev": 125.7383,
+          "p50": 7.0,
+          "p90": 55.0,
+          "p95": 72.0,
+          "p99": 995.0,
+          "cv_percent": 375.83
+        },
+        "asyncq_wait_read": {
+          "count": 80,
+          "mean": 0.239,
+          "median": 0.201,
+          "min": 0.044,
+          "max": 0.61,
+          "std_dev": 0.1178,
+          "p50": 0.201,
+          "p90": 0.393,
+          "p95": 0.548,
+          "p99": 0.61,
+          "cv_percent": 49.27
+        },
+        "syncq_wait_write": {
+          "count": 25,
+          "mean": 80.4,
+          "median": 75.0,
+          "min": 0.001,
+          "max": 196.0,
+          "std_dev": 54.0678,
+          "p50": 75.0,
+          "p90": 174.0,
+          "p95": 195.0,
+          "p99": 196.0,
+          "cv_percent": 67.25
+        },
+        "syncq_wait_read": {
+          "count": 95,
+          "mean": 0.178,
+          "median": 0.08,
+          "min": 0.023,
+          "max": 0.829,
+          "std_dev": 0.1943,
+          "p50": 0.08,
+          "p90": 0.468,
+          "p95": 0.61,
+          "p99": 0.829,
+          "cv_percent": 109.15
+        },
+        "active_only": {
+          "asyncq_wait_write": {
+            "count": 68,
+            "mean": 33.4559,
+            "median": 7.0,
+            "min": 2.0,
+            "max": 995.0,
+            "std_dev": 125.7383,
+            "p50": 7.0,
+            "p90": 55.0,
+            "p95": 72.0,
+            "p99": 995.0,
+            "cv_percent": 375.83
+          },
+          "syncq_wait_write": {
+            "count": 13,
+            "mean": 80.6924,
+            "median": 75.0,
+            "min": 0.001,
+            "max": 174.0,
+            "std_dev": 45.9044,
+            "p50": 75.0,
+            "p90": 140.0,
+            "p95": 174.0,
+            "p99": 174.0,
+            "cv_percent": 56.89
+          }
+        }
+      },
+      "phases": [
+        {
+          "phase": "mixed",
+          "start_idx": 0,
+          "end_idx": 4,
+          "duration_samples": 5,
+          "start_time": "2026-02-07T14:22:31.255770",
+          "end_time": "2026-02-07T14:22:51.311198"
+        },
+        {
+          "phase": "write",
+          "start_idx": 5,
+          "end_idx": 5,
+          "duration_samples": 1,
+          "start_time": "2026-02-07T14:22:56.324825",
+          "end_time": "2026-02-07T14:22:56.324825"
+        },
+        {
+          "phase": "read",
+          "start_idx": 6,
+          "end_idx": 7,
+          "duration_samples": 2,
+          "start_time": "2026-02-07T14:23:01.338362",
+          "end_time": "2026-02-07T14:23:06.352782"
+        },
+        {
+          "phase": "mixed",
+          "start_idx": 8,
+          "end_idx": 8,
+          "duration_samples": 1,
+          "start_time": "2026-02-07T14:23:11.366317",
+          "end_time": "2026-02-07T14:23:11.366317"
+        },
+        {
+          "phase": "read",
+          "start_idx": 9,
+          "end_idx": 11,
+          "duration_samples": 3,
+          "start_time": "2026-02-07T14:23:16.379356",
+          "end_time": "2026-02-07T14:23:26.406681"
+        },
+        {
+          "phase": "mixed",
+          "start_idx": 12,
+          "end_idx": 12,
+          "duration_samples": 1,
+          "start_time": "2026-02-07T14:23:31.421493",
+          "end_time": "2026-02-07T14:23:31.421493"
+        },
+        {
+          "phase": "read",
+          "start_idx": 13,
+          "end_idx": 13,
+          "duration_samples": 1,
+          "start_time": "2026-02-07T14:23:36.435110",
+          "end_time": "2026-02-07T14:23:36.435110"
+        },
+        {
+          "phase": "mixed",
+          "start_idx": 14,
+          "end_idx": 25,
+          "duration_samples": 12,
+          "start_time": "2026-02-07T14:23:41.448050",
+          "end_time": "2026-02-07T14:24:36.638664"
+        },
+        {
+          "phase": "write",
+          "start_idx": 26,
+          "end_idx": 26,
+          "duration_samples": 1,
+          "start_time": "2026-02-07T14:24:41.655409",
+          "end_time": "2026-02-07T14:24:41.655409"
+        },
+        {
+          "phase": "read",
+          "start_idx": 27,
+          "end_idx": 29,
+          "duration_samples": 3,
+          "start_time": "2026-02-07T14:24:46.674053",
+          "end_time": "2026-02-07T14:24:56.714890"
+        },
+        {
+          "phase": "mixed",
+          "start_idx": 30,
+          "end_idx": 42,
+          "duration_samples": 13,
+          "start_time": "2026-02-07T14:25:01.730402",
+          "end_time": "2026-02-07T14:26:02.005769"
+        },
+        {
+          "phase": "write",
+          "start_idx": 43,
+          "end_idx": 43,
+          "duration_samples": 1,
+          "start_time": "2026-02-07T14:26:07.045895",
+          "end_time": "2026-02-07T14:26:07.045895"
+        },
+        {
+          "phase": "mixed",
+          "start_idx": 44,
+          "end_idx": 45,
+          "duration_samples": 2,
+          "start_time": "2026-02-07T14:26:12.071524",
+          "end_time": "2026-02-07T14:26:17.091365"
+        },
+        {
+          "phase": "read",
+          "start_idx": 46,
+          "end_idx": 46,
+          "duration_samples": 1,
+          "start_time": "2026-02-07T14:26:22.108445",
+          "end_time": "2026-02-07T14:26:22.108445"
+        },
+        {
+          "phase": "mixed",
+          "start_idx": 47,
+          "end_idx": 47,
+          "duration_samples": 1,
+          "start_time": "2026-02-07T14:26:27.130905",
+          "end_time": "2026-02-07T14:26:27.130905"
+        },
+        {
+          "phase": "read",
+          "start_idx": 48,
+          "end_idx": 48,
+          "duration_samples": 1,
+          "start_time": "2026-02-07T14:26:32.147684",
+          "end_time": "2026-02-07T14:26:32.147684"
+        },
+        {
+          "phase": "mixed",
+          "start_idx": 49,
+          "end_idx": 89,
+          "duration_samples": 41,
+          "start_time": "2026-02-07T14:26:37.160293",
+          "end_time": "2026-02-07T14:29:58.874150"
+        },
+        {
+          "phase": "read",
+          "start_idx": 90,
+          "end_idx": 93,
+          "duration_samples": 4,
+          "start_time": "2026-02-07T14:30:03.890790",
+          "end_time": "2026-02-07T14:30:18.953775"
+        },
+        {
+          "phase": "mixed",
+          "start_idx": 94,
+          "end_idx": 94,
+          "duration_samples": 1,
+          "start_time": "2026-02-07T14:30:23.966489",
+          "end_time": "2026-02-07T14:30:23.966489"
+        },
+        {
+          "phase": "read",
+          "start_idx": 95,
+          "end_idx": 97,
+          "duration_samples": 3,
+          "start_time": "2026-02-07T14:30:28.986229",
+          "end_time": "2026-02-07T14:30:39.020507"
+        }
+      ],
+      "phase_stats": [
+        {
+          "phase": "mixed",
+          "duration_samples": 5,
+          "start_time": "2026-02-07T14:22:31.255770",
+          "end_time": "2026-02-07T14:22:51.311198",
+          "write_iops": {
+            "count": 5,
+            "mean": 3649.8,
+            "median": 4510.0,
+            "min": 9.0,
+            "max": 4620.0,
+            "std_dev": 2036.0182,
+            "p50": 4510.0,
+            "p90": 4620.0,
+            "p95": 4620.0,
+            "p99": 4620.0,
+            "cv_percent": 55.78
+          },
+          "write_bandwidth_mbps": {
+            "count": 5,
+            "mean": 816.6375,
+            "median": 1021.0,
+            "min": 0.1875,
+            "max": 1022.0,
+            "std_dev": 456.4107,
+            "p50": 1021.0,
+            "p90": 1022.0,
+            "p95": 1022.0,
+            "p99": 1022.0,
+            "cv_percent": 55.89
+          },
+          "write_latency_ms": {
+            "count": 5,
+            "mean": 0.0012,
+            "median": 0.001,
+            "min": 0.001,
+            "max": 0.002,
+            "std_dev": 0.0004,
+            "p50": 0.001,
+            "p90": 0.002,
+            "p95": 0.002,
+            "p99": 0.002,
+            "cv_percent": 37.27
+          },
+          "label": "1T-write",
+          "read_iops": {
+            "count": 5,
+            "mean": 44.2,
+            "median": 19.0,
+            "min": 2.0,
+            "max": 109.0,
+            "std_dev": 46.7194,
+            "p50": 19.0,
+            "p90": 109.0,
+            "p95": 109.0,
+            "p99": 109.0,
+            "cv_percent": 105.7
+          },
+          "read_bandwidth_mbps": {
+            "count": 5,
+            "mean": 0.2634,
+            "median": 0.0935,
+            "min": 0.0117,
+            "max": 0.6348,
+            "std_dev": 0.2829,
+            "p50": 0.0935,
+            "p90": 0.6348,
+            "p95": 0.6348,
+            "p99": 0.6348,
+            "cv_percent": 107.39
+          },
+          "read_latency_ms": {
+            "count": 5,
+            "mean": 0.0518,
+            "median": 0.049,
+            "min": 0.032,
+            "max": 0.083,
+            "std_dev": 0.0188,
+            "p50": 0.049,
+            "p90": 0.083,
+            "p95": 0.083,
+            "p99": 0.083,
+            "cv_percent": 36.31
+          }
+        },
+        {
+          "phase": "write",
+          "duration_samples": 1,
+          "start_time": "2026-02-07T14:22:56.324825",
+          "end_time": "2026-02-07T14:22:56.324825",
+          "label": "8T-write"
+        },
+        {
+          "phase": "read",
+          "duration_samples": 2,
+          "start_time": "2026-02-07T14:23:01.338362",
+          "end_time": "2026-02-07T14:23:06.352782",
+          "label": "1T-read"
+        },
+        {
+          "phase": "mixed",
+          "duration_samples": 1,
+          "start_time": "2026-02-07T14:23:11.366317",
+          "end_time": "2026-02-07T14:23:11.366317",
+          "label": "8T-read"
+        },
+        {
+          "phase": "read",
+          "duration_samples": 3,
+          "start_time": "2026-02-07T14:23:16.379356",
+          "end_time": "2026-02-07T14:23:26.406681",
+          "read_iops": {
+            "count": 3,
+            "mean": 20.3333,
+            "median": 23.0,
+            "min": 6.0,
+            "max": 32.0,
+            "std_dev": 13.2035,
+            "p50": 23.0,
+            "p90": 32.0,
+            "p95": 32.0,
+            "p99": 32.0,
+            "cv_percent": 64.94
+          },
+          "read_bandwidth_mbps": {
+            "count": 3,
+            "mean": 0.1054,
+            "median": 0.1328,
+            "min": 0.0351,
+            "max": 0.1484,
+            "std_dev": 0.0614,
+            "p50": 0.1328,
+            "p90": 0.1484,
+            "p95": 0.1484,
+            "p99": 0.1484,
+            "cv_percent": 58.28
+          },
+          "read_latency_ms": {
+            "count": 3,
+            "mean": 0.0493,
+            "median": 0.051,
+            "min": 0.038,
+            "max": 0.059,
+            "std_dev": 0.0106,
+            "p50": 0.051,
+            "p90": 0.059,
+            "p95": 0.059,
+            "p99": 0.059,
+            "cv_percent": 21.48
+          },
+          "label": "16T-read"
+        },
+        {
+          "phase": "mixed",
+          "duration_samples": 1,
+          "start_time": "2026-02-07T14:23:31.421493",
+          "end_time": "2026-02-07T14:23:31.421493",
+          "label": "32T-read"
+        },
+        {
+          "phase": "read",
+          "duration_samples": 1,
+          "start_time": "2026-02-07T14:23:36.435110",
+          "end_time": "2026-02-07T14:23:36.435110"
+        },
+        {
+          "phase": "mixed",
+          "duration_samples": 12,
+          "start_time": "2026-02-07T14:23:41.448050",
+          "end_time": "2026-02-07T14:24:36.638664",
+          "write_iops": {
+            "count": 12,
+            "mean": 13608.3333,
+            "median": 13650.0,
+            "min": 13100.0,
+            "max": 14200.0,
+            "std_dev": 302.8901,
+            "p50": 13700.0,
+            "p90": 13800.0,
+            "p95": 14200.0,
+            "p99": 14200.0,
+            "cv_percent": 2.23
+          },
+          "write_bandwidth_mbps": {
+            "count": 12,
+            "mean": 3065.1733,
+            "median": 3072.0,
+            "min": 2928.64,
+            "max": 3184.64,
+            "std_dev": 55.288,
+            "p50": 3072.0,
+            "p90": 3072.0,
+            "p95": 3184.64,
+            "p99": 3184.64,
+            "cv_percent": 1.8
+          },
+          "write_latency_ms": {
+            "count": 12,
+            "mean": 0.0013,
+            "median": 0.001,
+            "min": 0.001,
+            "max": 0.004,
+            "std_dev": 0.0009,
+            "p50": 0.001,
+            "p90": 0.002,
+            "p95": 0.004,
+            "p99": 0.004,
+            "cv_percent": 66.57
+          },
+          "label": "16T-write",
+          "read_iops": {
+            "count": 12,
+            "mean": 58.6667,
+            "median": 40.0,
+            "min": 6.0,
+            "max": 216.0,
+            "std_dev": 65.3012,
+            "p50": 43.0,
+            "p90": 154.0,
+            "p95": 216.0,
+            "p99": 216.0,
+            "cv_percent": 111.31
+          },
+          "read_bandwidth_mbps": {
+            "count": 12,
+            "mean": 0.3009,
+            "median": 0.2178,
+            "min": 0.0272,
+            "max": 1.3,
+            "std_dev": 0.3673,
+            "p50": 0.249,
+            "p90": 0.6777,
+            "p95": 1.3,
+            "p99": 1.3,
+            "cv_percent": 122.05
+          },
+          "read_latency_ms": {
+            "count": 12,
+            "mean": 0.0724,
+            "median": 0.064,
+            "min": 0.028,
+            "max": 0.14,
+            "std_dev": 0.0385,
+            "p50": 0.079,
+            "p90": 0.128,
+            "p95": 0.14,
+            "p99": 0.14,
+            "cv_percent": 53.14
+          }
+        },
+        {
+          "phase": "write",
+          "duration_samples": 1,
+          "start_time": "2026-02-07T14:24:41.655409",
+          "end_time": "2026-02-07T14:24:41.655409",
+          "label": "32T-write"
+        },
+        {
+          "phase": "read",
+          "duration_samples": 3,
+          "start_time": "2026-02-07T14:24:46.674053",
+          "end_time": "2026-02-07T14:24:56.714890",
+          "read_iops": {
+            "count": 3,
+            "mean": 50300.0,
+            "median": 50300.0,
+            "min": 50300.0,
+            "max": 50300.0,
+            "std_dev": 0.0,
+            "p50": 50300.0,
+            "p90": 50300.0,
+            "p95": 50300.0,
+            "p99": 50300.0,
+            "cv_percent": 0.0
+          },
+          "read_bandwidth_mbps": {
+            "count": 3,
+            "mean": 12902.4,
+            "median": 12902.4,
+            "min": 12902.4,
+            "max": 12902.4,
+            "std_dev": 0.0,
+            "p50": 12902.4,
+            "p90": 12902.4,
+            "p95": 12902.4,
+            "p99": 12902.4,
+            "cv_percent": 0.0
+          },
+          "read_latency_ms": {
+            "count": 3,
+            "mean": 23.3333,
+            "median": 25.0,
+            "min": 18.0,
+            "max": 27.0,
+            "std_dev": 4.7258,
+            "p50": 25.0,
+            "p90": 27.0,
+            "p95": 27.0,
+            "p99": 27.0,
+            "cv_percent": 20.25
+          }
+        },
+        {
+          "phase": "mixed",
+          "duration_samples": 13,
+          "start_time": "2026-02-07T14:25:01.730402",
+          "end_time": "2026-02-07T14:26:02.005769",
+          "write_iops": {
+            "count": 13,
+            "mean": 24430.7692,
+            "median": 24300.0,
+            "min": 23000.0,
+            "max": 26200.0,
+            "std_dev": 1026.6325,
+            "p50": 24300.0,
+            "p90": 25700.0,
+            "p95": 26200.0,
+            "p99": 26200.0,
+            "cv_percent": 4.2
+          },
+          "write_bandwidth_mbps": {
+            "count": 13,
+            "mean": 5391.7538,
+            "median": 5335.04,
+            "min": 5109.76,
+            "max": 5826.56,
+            "std_dev": 257.1788,
+            "p50": 5335.04,
+            "p90": 5816.32,
+            "p95": 5826.56,
+            "p99": 5826.56,
+            "cv_percent": 4.77
+          },
+          "write_latency_ms": {
+            "count": 13,
+            "mean": 0.001,
+            "median": 0.001,
+            "min": 0.001,
+            "max": 0.001,
+            "std_dev": 0.0,
+            "p50": 0.001,
+            "p90": 0.001,
+            "p95": 0.001,
+            "p99": 0.001,
+            "cv_percent": 0.0
+          },
+          "read_iops": {
+            "count": 13,
+            "mean": 146.3077,
+            "median": 70.0,
+            "min": 10.0,
+            "max": 992.0,
+            "std_dev": 262.351,
+            "p50": 70.0,
+            "p90": 191.0,
+            "p95": 992.0,
+            "p99": 992.0,
+            "cv_percent": 179.31
+          },
+          "read_bandwidth_mbps": {
+            "count": 13,
+            "mean": 0.8917,
+            "median": 0.377,
+            "min": 0.0507,
+            "max": 6.26,
+            "std_dev": 1.6701,
+            "p50": 0.377,
+            "p90": 1.32,
+            "p95": 6.26,
+            "p99": 6.26,
+            "cv_percent": 187.29
+          },
+          "read_latency_ms": {
+            "count": 13,
+            "mean": 0.0934,
+            "median": 0.072,
+            "min": 0.035,
+            "max": 0.247,
+            "std_dev": 0.0594,
+            "p50": 0.072,
+            "p90": 0.137,
+            "p95": 0.247,
+            "p99": 0.247,
+            "cv_percent": 63.58
+          }
+        },
+        {
+          "phase": "write",
+          "duration_samples": 1,
+          "start_time": "2026-02-07T14:26:07.045895",
+          "end_time": "2026-02-07T14:26:07.045895"
+        },
+        {
+          "phase": "mixed",
+          "duration_samples": 2,
+          "start_time": "2026-02-07T14:26:12.071524",
+          "end_time": "2026-02-07T14:26:17.091365"
+        },
+        {
+          "phase": "read",
+          "duration_samples": 1,
+          "start_time": "2026-02-07T14:26:22.108445",
+          "end_time": "2026-02-07T14:26:22.108445"
+        },
+        {
+          "phase": "mixed",
+          "duration_samples": 1,
+          "start_time": "2026-02-07T14:26:27.130905",
+          "end_time": "2026-02-07T14:26:27.130905"
+        },
+        {
+          "phase": "read",
+          "duration_samples": 1,
+          "start_time": "2026-02-07T14:26:32.147684",
+          "end_time": "2026-02-07T14:26:32.147684"
+        },
+        {
+          "phase": "mixed",
+          "duration_samples": 41,
+          "start_time": "2026-02-07T14:26:37.160293",
+          "end_time": "2026-02-07T14:29:58.874150",
+          "write_iops": {
+            "count": 41,
+            "mean": 82278.1707,
+            "median": 47500.0,
+            "min": 9.0,
+            "max": 188000.0,
+            "std_dev": 68995.9084,
+            "p50": 47500.0,
+            "p90": 173000.0,
+            "p95": 175000.0,
+            "p99": 188000.0,
+            "cv_percent": 83.86
+          },
+          "write_bandwidth_mbps": {
+            "count": 41,
+            "mean": 4161.4457,
+            "median": 4997.12,
+            "min": 0.125,
+            "max": 7710.72,
+            "std_dev": 2873.8952,
+            "p50": 4997.12,
+            "p90": 7260.16,
+            "p95": 7424.0,
+            "p99": 7710.72,
+            "cv_percent": 69.06
+          },
+          "write_latency_ms": {
+            "count": 41,
+            "mean": 28.3915,
+            "median": 0.002,
+            "min": 0.001,
+            "max": 197.0,
+            "std_dev": 62.7014,
+            "p50": 0.002,
+            "p90": 152.0,
+            "p95": 195.0,
+            "p99": 197.0,
+            "cv_percent": 220.85
+          },
+          "read_iops": {
+            "count": 41,
+            "mean": 20504.6829,
+            "median": 42.0,
+            "min": 2.0,
+            "max": 203000.0,
+            "std_dev": 47522.3816,
+            "p50": 42.0,
+            "p90": 50300.0,
+            "p95": 153000.0,
+            "p99": 203000.0,
+            "cv_percent": 231.76
+          },
+          "read_bandwidth_mbps": {
+            "count": 41,
+            "mean": 2619.7468,
+            "median": 0.1934,
+            "min": 0.0117,
+            "max": 12902.4,
+            "std_dev": 5074.1064,
+            "p50": 0.1934,
+            "p90": 12595.2,
+            "p95": 12697.6,
+            "p99": 12902.4,
+            "cv_percent": 193.69
+          },
+          "read_latency_ms": {
+            "count": 41,
+            "mean": 20.021,
+            "median": 0.079,
+            "min": 0.024,
+            "max": 168.0,
+            "std_dev": 43.0709,
+            "p50": 0.079,
+            "p90": 90.0,
+            "p95": 120.0,
+            "p99": 168.0,
+            "cv_percent": 215.13
+          }
+        },
+        {
+          "phase": "read",
+          "duration_samples": 4,
+          "start_time": "2026-02-07T14:30:03.890790",
+          "end_time": "2026-02-07T14:30:18.953775",
+          "read_iops": {
+            "count": 4,
+            "mean": 216750.0,
+            "median": 216500.0,
+            "min": 212000.0,
+            "max": 222000.0,
+            "std_dev": 4573.4742,
+            "p50": 219000.0,
+            "p90": 222000.0,
+            "p95": 222000.0,
+            "p99": 222000.0,
+            "cv_percent": 2.11
+          },
+          "read_bandwidth_mbps": {
+            "count": 4,
+            "mean": 6177.28,
+            "median": 6722.56,
+            "min": 4474.88,
+            "max": 6789.12,
+            "std_dev": 1135.744,
+            "p50": 6758.4,
+            "p90": 6789.12,
+            "p95": 6789.12,
+            "p99": 6789.12,
+            "cv_percent": 18.39
+          },
+          "read_latency_ms": {
+            "count": 4,
+            "mean": 53.5,
+            "median": 53.5,
+            "min": 52.0,
+            "max": 55.0,
+            "std_dev": 1.291,
+            "p50": 54.0,
+            "p90": 55.0,
+            "p95": 55.0,
+            "p99": 55.0,
+            "cv_percent": 2.41
+          }
+        },
+        {
+          "phase": "mixed",
+          "duration_samples": 1,
+          "start_time": "2026-02-07T14:30:23.966489",
+          "end_time": "2026-02-07T14:30:23.966489"
+        },
+        {
+          "phase": "read",
+          "duration_samples": 3,
+          "start_time": "2026-02-07T14:30:28.986229",
+          "end_time": "2026-02-07T14:30:39.020507",
+          "read_iops": {
+            "count": 3,
+            "mean": 219333.3333,
+            "median": 220000.0,
+            "min": 213000.0,
+            "max": 225000.0,
+            "std_dev": 6027.7138,
+            "p50": 220000.0,
+            "p90": 225000.0,
+            "p95": 225000.0,
+            "p99": 225000.0,
+            "cv_percent": 2.75
+          },
+          "read_bandwidth_mbps": {
+            "count": 3,
+            "mean": 2935.4667,
+            "median": 2928.64,
+            "min": 2918.4,
+            "max": 2959.36,
+            "std_dev": 21.3163,
+            "p50": 2928.64,
+            "p90": 2959.36,
+            "p95": 2959.36,
+            "p99": 2959.36,
+            "cv_percent": 0.73
+          },
+          "read_latency_ms": {
+            "count": 3,
+            "mean": 70.3333,
+            "median": 89.0,
+            "min": 30.0,
+            "max": 92.0,
+            "std_dev": 34.9619,
+            "p50": 89.0,
+            "p90": 92.0,
+            "p95": 92.0,
+            "p99": 92.0,
+            "cv_percent": 49.71
+          }
+        }
+      ],
+      "anomalies": [
+        {
+          "index": 79,
+          "timestamp": "2026-02-07T14:29:23.740580",
+          "metric": "read_latency_ms",
+          "value": 168.0,
+          "z_score": 4.36,
+          "direction": "spike"
+        },
+        {
+          "index": 80,
+          "timestamp": "2026-02-07T14:29:28.754724",
+          "metric": "read_latency_ms",
+          "value": 143.0,
+          "z_score": 3.64,
+          "direction": "spike"
+        },
+        {
+          "index": 74,
+          "timestamp": "2026-02-07T14:29:38.798394",
+          "metric": "write_latency_ms",
+          "value": 197.0,
+          "z_score": 3.62,
+          "direction": "spike"
+        },
+        {
+          "index": 72,
+          "timestamp": "2026-02-07T14:29:28.754724",
+          "metric": "write_latency_ms",
+          "value": 196.0,
+          "z_score": 3.6,
+          "direction": "spike"
+        },
+        {
+          "index": 71,
+          "timestamp": "2026-02-07T14:29:23.740580",
+          "metric": "write_latency_ms",
+          "value": 195.0,
+          "z_score": 3.58,
+          "direction": "spike"
+        },
+        {
+          "index": 73,
+          "timestamp": "2026-02-07T14:29:33.777035",
+          "metric": "write_latency_ms",
+          "value": 190.0,
+          "z_score": 3.48,
+          "direction": "spike"
+        }
+      ],
+      "anomaly_count": 6,
+      "io_size_kb": {
+        "write_kb_per_op": {
+          "count": 80,
+          "mean": 135.8343,
+          "median": 221.48,
+          "min": 9.1972,
+          "max": 236.5209,
+          "std_dev": 100.0557,
+          "p50": 221.7897,
+          "p90": 231.7475,
+          "p95": 233.4829,
+          "p99": 236.5209,
+          "cv_percent": 73.66
+        },
+        "read_kb_per_op": {
+          "count": 95,
+          "mean": 43.3623,
+          "median": 5.9833,
+          "min": 4.0938,
+          "max": 263.1884,
+          "std_dev": 86.8975,
+          "p50": 5.9833,
+          "p90": 261.6249,
+          "p95": 262.6652,
+          "p99": 263.1884,
+          "cv_percent": 200.4
+        }
+      },
+      "capacity_gib": {
+        "start": 3368.96,
+        "end": 4198.4,
+        "max": 4198.4,
+        "min": 3368.96
+      },
+      "observations": [
+        {
+          "category": "telemetry_write_consistency",
+          "description": "Write IOPS variable (CV=121.0%, mean=49,624, std_dev=60,026)",
+          "data": {
+            "cv_percent": 120.96,
+            "mean": 49623.8
+          }
+        },
+        {
+          "category": "telemetry_read_consistency",
+          "description": "Read IOPS variable (CV=214.4%, mean=30,863, std_dev=66,181)",
+          "data": {
+            "cv_percent": 214.43,
+            "mean": 30863.1158
+          }
+        },
+        {
+          "category": "telemetry_anomalies",
+          "description": "6 anomalies detected (read_latency_ms: 2, write_latency_ms: 4)",
+          "data": {
+            "read_latency_ms": 2,
+            "write_latency_ms": 4
+          }
+        },
+        {
+          "category": "telemetry_phases",
+          "description": "Detected 20 active phase segments: 9 mixed, 8 read, 3 write",
+          "data": null
+        },
+        {
+          "category": "telemetry_write_io_size",
+          "description": "Write average I/O size: 136 KB/op",
+          "data": {
+            "mean_kb": 135.8343,
+            "median_kb": 221.48
+          }
+        },
+        {
+          "category": "telemetry_read_io_size",
+          "description": "Read average I/O size: 43 KB/op",
+          "data": {
+            "mean_kb": 43.3623,
+            "median_kb": 5.9833
+          }
+        }
+      ]
+    }
+  ]
+}

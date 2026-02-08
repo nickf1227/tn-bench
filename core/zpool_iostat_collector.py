@@ -465,13 +465,15 @@ class ZpoolIostatCollector:
                     operations_write=self._parse_value_with_suffix(parts[4]),
                     bandwidth_read=parts[5],
                     bandwidth_write=parts[6],
+                    # zpool iostat -l columns are interleaved read/write pairs:
+                    #   total_wait(r,w) disk_wait(r,w) syncq_wait(r,w) asyncq_wait(r,w) scrub trim [rebuild]
                     total_wait_read=parts[7],
-                    disk_wait_read=parts[8],
-                    syncq_wait_read=parts[9],
-                    asyncq_wait_read=parts[10],
-                    total_wait_write=parts[11],
-                    disk_wait_write=parts[12],
-                    syncq_wait_write=parts[13],
+                    total_wait_write=parts[8],
+                    disk_wait_read=parts[9],
+                    disk_wait_write=parts[10],
+                    syncq_wait_read=parts[11],
+                    syncq_wait_write=parts[12],
+                    asyncq_wait_read=parts[13],
                     asyncq_wait_write=parts[14],
                     scrub_wait=parts[15] if len(parts) > 15 else "-",
                     trim_wait=parts[16] if len(parts) > 16 else "-",
@@ -919,6 +921,20 @@ def calculate_zpool_iostat_summary(telemetry: ZpoolIostatTelemetry) -> dict:
                 "sample_count": len(seg_samples),
                 **_stats_for_samples(seg_samples),
             }
+
+    # Fallback: if phase detection didn't run (e.g. reconstructed from JSON)
+    # but segment labels exist, build per-segment stats from all labeled samples
+    if not segment_stats:
+        labeled = [s for s in samples if s.segment_label]
+        if labeled:
+            seg_buckets: Dict[str, List[ZpoolIostatSample]] = {}
+            for s in labeled:
+                seg_buckets.setdefault(s.segment_label, []).append(s)
+            for lbl, seg_samples in seg_buckets.items():
+                segment_stats[lbl] = {
+                    "sample_count": len(seg_samples),
+                    **_stats_for_samples(seg_samples),
+                }
 
     # Phase summary
     phase_summary = _build_phase_summary(telemetry.phase_spans, samples)

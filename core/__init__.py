@@ -15,6 +15,15 @@ from core.zpool_iostat_collector import (
     calculate_zpool_iostat_summary
 )
 
+# Import arcstat collector
+from core.arcstat_collector import (
+    ArcstatCollector,
+    ArcstatSample,
+    ArcstatTelemetry,
+    calculate_arcstat_summary,
+    detect_l2arc
+)
+
 
 def get_system_info():
     """Fetch system information from TrueNAS API."""

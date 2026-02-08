@@ -12,7 +12,7 @@ Architecture note:
 """
 
 from benchmarks.base import BenchmarkBase
-from benchmarks.zfs_pool import ZFSPoolBenchmark
+from benchmarks.zfs_pool import ZFSPoolBenchmark, POOL_BLOCK_SIZES
 from benchmarks.disk_enhanced import EnhancedDiskBenchmark, BLOCK_SIZES
 
-__all__ = ['BenchmarkBase', 'ZFSPoolBenchmark', 'EnhancedDiskBenchmark', 'BLOCK_SIZES']
+__all__ = ['BenchmarkBase', 'ZFSPoolBenchmark', 'POOL_BLOCK_SIZES', 'EnhancedDiskBenchmark', 'BLOCK_SIZES']
