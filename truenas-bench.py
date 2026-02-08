@@ -264,7 +264,8 @@ def main():
     parser = argparse.ArgumentParser(description='tn-bench System Benchmark')
     parser.add_argument('--output', type=str, default='./tn_bench_results.json',
                         help='Path to output JSON file (default: ./tn_bench_results.json)')
-    args = parser.parse_args()
+    parser.add_argument('--limit', type=int, default='0',
+                        help='Max threads to benchmark (default: no limit)')    args = parser.parse_args()
 
     benchmark_results = {
         "system_info": {},
@@ -333,7 +334,10 @@ def main():
         benchmark_results["benchmark_config"]["disk_block_size"] = BLOCK_SIZES[block_size]["size"]
         benchmark_results["benchmark_config"]["disk_seek_threads"] = seek_threads
 
-    cores = system_info.get("cores", 1)
+    if args.limit > 0:
+        cores = max(4, min(args.limit, system_info.get("cores", 1)))
+    else:
+        cores = system_info.get("cores", 1)
 
     print_header("DD Benchmark Starting")
     print_info(f"Using {cores} threads for the benchmark.")
