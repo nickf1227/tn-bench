@@ -105,10 +105,18 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for detailed documentation on the modular
 ### Running the Script is a simple git clone
 ### Please note, this script needs to be run as `root`. 
 
+**Interactive Mode (default):**
    ```
    git clone -b tn-bench-2.2 https://github.com/nickf1227/tn-bench.git && cd tn-bench && python3 truenas-bench.py
    ```
 
+**Unattended Mode (v2.3+):**
+For automated runs, CI/CD, or batch testing, use `--unattended` with CLI arguments:
+   ```
+   python3 truenas-bench.py --unattended --pools all --zfs-iterations 2 --disk-iterations 0 --confirm
+   ```
+
+See [Unattended Mode](#unattended-mode-v23) section for full CLI reference.
 
 NOTE: `/dev/urandom` generates inherently uncompressible data, the the value of the compression options above is minimal in the current form.
 
@@ -898,6 +906,420 @@ Enter iteration count [2]: 0
  
 ```
 
+## Unattended Mode (v2.3+)
+
+tn-bench v2.3 adds full support for unattended/automated operation. All interactive prompts can be bypassed using CLI arguments, enabling batch testing, CI/CD integration, and scripted runs.
+
+### CLI Options
+
+| Argument | Description | Values | Required in Unattended |
+|----------|-------------|--------|------------------------|
+| `--unattended`, `--auto` | Enable unattended mode (skip all prompts) | `true` when present | No (but required to bypass prompts) |
+| `--output` | Output JSON file path | Path string | No (default: `./tn_bench_results.json`) |
+| `--pools` | Pool selection | `'all'`, `'none'`, or comma-separated names (e.g., `'fire,ice'`) | **Yes** |
+| `--zfs-iterations` | ZFS pool benchmark iterations | Integer 0-100 (0 = skip) | **Yes** |
+| `--pool-block-size` | Pool benchmark block size | `16K`, `32K`, `64K`, `128K`, `256K`, `512K`, `1M`, `2M`, `4M`, `8M`, `16M` | No (default: `1M`) |
+| `--disk-iterations` | Disk benchmark iterations | Integer 0-100 (0 = skip) | **Yes** |
+| `--disk-modes` | Disk test modes, comma-separated | `serial`, `parallel`, `seek_stress` | No (default: `serial`) |
+| `--disk-block-size` | Disk benchmark block size | `4K`, `32K`, `128K`, `1M` | No (default: `1M`) |
+| `--seek-threads` | Threads per disk for seek_stress mode | Integer 1-32 | No (default: `4`) |
+| `--confirm` | Auto-confirm safety prompt | `true` when present | **Yes** |
+| `--cleanup` | Auto-answer dataset cleanup | `yes` or `no` | No (default: `yes`) |
+
+### Preset Examples
+
+#### All pools, no disks
+```bash
+python3 truenas-bench.py --unattended --pools all --zfs-iterations 2 --disk-iterations 0 --confirm
+```
+
+#### All disks, no pools
+```bash
+python3 truenas-bench.py --unattended --pools none --zfs-iterations 0 --disk-iterations 2 --disk-modes serial --confirm
+```
+
+#### Burn-in mode
+```bash
+python3 truenas-bench.py --unattended --pools all --zfs-iterations 5 --disk-iterations 3 --disk-modes serial,parallel --confirm
+```
+
+#### Specific pools with custom block sizes
+```bash
+python3 truenas-bench.py --unattended --pools fire,ice --zfs-iterations 2 --pool-block-size 128K --disk-iterations 1 --disk-block-size 1M --disk-modes serial --confirm
+```
+
+#### Seek-stress test with cleanup disabled
+```bash
+python3 truenas-bench.py --unattended --pools none --zfs-iterations 0 --disk-iterations 1 --disk-modes seek_stress --seek-threads 8 --cleanup no --confirm
+```
+
+### Validation Rules
+
+When `--unattended` is used:
+1. **`--confirm` is required** — safety acknowledgment
+2. **`--pools` is required** — specify which pools to test
+3. **`--zfs-iterations` is required** — even if set to 0 (skip)
+4. **`--disk-iterations` is required** — even if set to 0 (skip)
+5. **All other arguments have sensible defaults** matching interactive mode
+6. **Missing required arguments trigger a helpful error** with example usage
+7. **Dataset cleanup defaults to `yes`** — temp datasets are deleted unless `--cleanup no`
+
+### Sample Output in Unattended Mode
+```
+############################################################
+#                 tn-bench v2.3 (Unattended)               #
+############################################################
+
+* Mode: UNATTENDED (all prompts skipped)
+* Unattended: Selected pools: fire, ice
+* Unattended: ZFS pool iterations: 2
+* Unattended: Pool block size: 128K
+* Unattended: Disk iterations: 1
+* Unattended: Disk test modes: serial
+* Unattended: Disk block size: 1M
+* Unattended: Dataset cleanup: yes
+
+...
+```
+
+### Compatibility Notes
+
+- **Interactive mode remains default** — no breaking changes
+- **All existing functionality preserved** — unattended is additive
+- **Argument validation mirrors interactive bounds** — same 0-100 ranges, same block size options
+- **Error messages guide users** — show missing arguments with examples
+- **Default cleanup behavior** — datasets auto-deleted in unattended (configurable)
+
+## Batch/Matrix Config Mode (v2.3+)
+
+For automated sequential runs with different configurations — such as testing all block sizes on the same pool, comparing multiple pools with the same workload, or running a regression test suite — use `--config` with a JSON or YAML configuration file.
+
+### Quick Start
+
+```bash
+python3 truenas-bench.py --config batch_block_size_matrix.json --confirm
+```
+
+### CLI Argument
+
+| Argument | Description |
+|----------|-------------|
+| `--config <path>` | Path to JSON or YAML batch config file |
+| `--confirm` | Required safety confirmation |
+| `--output` | Base path for output files (default: `./tn_bench_results.json`) |
+
+`--config` is mutually exclusive with `--unattended` individual arguments. When `--config` is used, all run parameters come from the config file.
+
+### Config File Schema
+
+Config files have three top-level sections:
+
+| Key | Type | Required | Description |
+|-----|------|----------|-------------|
+| `description` | string | No | Human-readable description of this batch |
+| `continue_on_error` | bool | No | If true, continue to next run on failure (default: false) |
+| `global` | object | No | Default settings applied to all runs |
+| `runs` | array | **Yes** | List of individual benchmark runs |
+
+#### Global Settings
+
+The `global` object sets defaults for all runs. Any setting in a run overrides the global value.
+
+| Key | Type | Default | Description |
+|-----|------|---------|-------------|
+| `pools` | list/string | `["all"]` | Pool selection: list of names, `["all"]`, or `["none"]` |
+| `zfs_iterations` | int | `2` | ZFS benchmark iterations (0-100, 0 = skip) |
+| `pool_block_size` | string | `"1M"` | Block size: 4K, 16K, 32K, 64K, 128K, 256K, 512K, 1M, 2M, 4M, 8M, 16M |
+| `disk_iterations` | int | `0` | Disk benchmark iterations (0-100, 0 = skip) |
+| `disk_modes` | list | `["serial"]` | Disk test modes: serial, parallel, seek_stress |
+| `disk_block_size` | string | `"1M"` | Disk block size: 4K, 32K, 128K, 1M |
+| `seek_threads` | int | `4` | Threads per disk for seek_stress (1-32) |
+| `cleanup` | bool | `true` | Delete test datasets after each run |
+| `verify_cleanup` | bool | `true` | Verify dataset deletion after cleanup |
+| `retry_cleanup` | int | `3` | Max cleanup retry attempts |
+| `force_cleanup` | bool | `false` | Use force delete on cleanup |
+
+#### Run Settings
+
+Each run in the `runs` array has:
+
+| Key | Type | Required | Description |
+|-----|------|----------|-------------|
+| `name` | string | **Yes** | Unique name for this run (used in filenames) |
+| *(any global key)* | *(same)* | No | Override any global setting for this run |
+
+### Config File Examples
+
+#### JSON: Block Size Matrix
+
+```json
+{
+  "description": "Block size matrix test on inferno pool",
+  "continue_on_error": true,
+  "global": {
+    "pools": ["inferno"],
+    "cleanup": true,
+    "verify_cleanup": true,
+    "retry_cleanup": 3,
+    "disk_iterations": 0
+  },
+  "runs": [
+    {
+      "name": "4K-block-test",
+      "zfs_iterations": 2,
+      "pool_block_size": "4K"
+    },
+    {
+      "name": "32K-block-test",
+      "zfs_iterations": 2,
+      "pool_block_size": "32K"
+    },
+    {
+      "name": "128K-block-test",
+      "zfs_iterations": 2,
+      "pool_block_size": "128K"
+    },
+    {
+      "name": "1M-block-test",
+      "zfs_iterations": 2,
+      "pool_block_size": "1M"
+    }
+  ]
+}
+```
+
+#### YAML: Block Size Matrix
+
+```yaml
+description: "Block size matrix test on inferno pool"
+continue_on_error: true
+
+global:
+  pools:
+    - inferno
+  cleanup: true
+  verify_cleanup: true
+  retry_cleanup: 3
+  disk_iterations: 0
+
+runs:
+  - name: 4K-block-test
+    zfs_iterations: 2
+    pool_block_size: "4K"
+
+  - name: 32K-block-test
+    zfs_iterations: 2
+    pool_block_size: "32K"
+
+  - name: 128K-block-test
+    zfs_iterations: 2
+    pool_block_size: "128K"
+
+  - name: 1M-block-test
+    zfs_iterations: 2
+    pool_block_size: "1M"
+```
+
+#### Iteration Scaling Test
+
+```json
+{
+  "description": "Measure variance reduction with more iterations",
+  "continue_on_error": true,
+  "global": {
+    "pools": ["all"],
+    "cleanup": true,
+    "pool_block_size": "1M",
+    "disk_iterations": 0
+  },
+  "runs": [
+    { "name": "1-iteration", "zfs_iterations": 1 },
+    { "name": "2-iterations", "zfs_iterations": 2 },
+    { "name": "5-iterations", "zfs_iterations": 5 },
+    { "name": "10-iterations", "zfs_iterations": 10 }
+  ]
+}
+```
+
+#### Multi-Pool Comparison
+
+```json
+{
+  "description": "Same config on different pools",
+  "continue_on_error": true,
+  "global": {
+    "cleanup": true,
+    "zfs_iterations": 3,
+    "pool_block_size": "1M",
+    "disk_iterations": 0
+  },
+  "runs": [
+    { "name": "fire-pool", "pools": ["fire"] },
+    { "name": "ice-pool", "pools": ["ice"] },
+    { "name": "inferno-pool", "pools": ["inferno"] }
+  ]
+}
+```
+
+#### Regression Test Suite
+
+```json
+{
+  "description": "Known good configurations for periodic validation",
+  "continue_on_error": false,
+  "global": {
+    "cleanup": true,
+    "verify_cleanup": true,
+    "retry_cleanup": 5,
+    "force_cleanup": true
+  },
+  "runs": [
+    {
+      "name": "baseline-1M-zfs",
+      "pools": ["all"],
+      "zfs_iterations": 2,
+      "pool_block_size": "1M",
+      "disk_iterations": 0
+    },
+    {
+      "name": "baseline-disk-serial",
+      "pools": ["none"],
+      "zfs_iterations": 0,
+      "disk_iterations": 2,
+      "disk_modes": ["serial"],
+      "disk_block_size": "1M"
+    }
+  ]
+}
+```
+
+### Output Files
+
+Batch mode generates individual results per run plus an aggregate summary:
+
+| File | Description |
+|------|-------------|
+| `tn_bench_results_run1_4K-block-test.json` | Raw results for run 1 |
+| `tn_bench_results_run1_4K-block-test_analytics.json` | Analytics for run 1 |
+| `tn_bench_results_run1_4K-block-test_report.md` | Report for run 1 |
+| `tn_bench_results_run2_32K-block-test.json` | Raw results for run 2 |
+| ... | *(same pattern for each run)* |
+| `tn_bench_results_batch_summary.json` | **Aggregate summary with comparison** |
+
+### Batch Summary Schema
+
+```json
+{
+  "description": "Block size matrix test on inferno pool",
+  "config_file": "/root/batch_block_size_matrix.json",
+  "start_time": "2025-02-08T14:30:00",
+  "end_time": "2025-02-08T16:45:00",
+  "total_duration_minutes": 135.0,
+  "total_runs": 4,
+  "successful_runs": 4,
+  "failed_runs": 0,
+  "system_info": {
+    "cpu_model": "Intel Xeon Silver 4114",
+    "logical_cores": 40,
+    "memory_gib": 251.55
+  },
+  "runs": [
+    {
+      "index": 1,
+      "name": "4K-block-test",
+      "status": "success",
+      "config": {
+        "pools": ["inferno"],
+        "zfs_iterations": 2,
+        "pool_block_size": "4K"
+      },
+      "pool_metrics": {
+        "inferno": {
+          "peak_write_mbps": 245.3,
+          "peak_write_threads": 40,
+          "peak_read_mbps": 1234.5,
+          "peak_read_threads": 20,
+          "dwpd": 5.67,
+          "total_writes_gib": 640.0,
+          "duration_seconds": 1842.5
+        }
+      },
+      "output_file": "/root/tn_bench_results_run1_4K-block-test.json",
+      "duration_seconds": 1850.3
+    }
+  ]
+}
+```
+
+### Robust Dataset Cleanup
+
+Batch mode includes hardened dataset cleanup between runs:
+
+1. **Pre-run safety check** — if a stale `tn-bench` dataset exists before creating a new one, it's automatically cleaned up first
+2. **Post-run cleanup** — dataset is deleted after each run completes
+3. **Verification** — after deletion, the API is queried to confirm the dataset no longer exists
+4. **Retry logic** — configurable retries (default 3) with automatic escalation to force delete
+5. **Force delete** — `force_cleanup: true` uses forced deletion from the first attempt
+6. **Non-blocking** — if cleanup ultimately fails after all retries, a warning is logged and the batch continues to the next run
+
+### Sample Batch Output
+
+```
+############################################################
+#                 tn-bench v2.3 (Modular)                  #
+############################################################
+
+============================================================
+ Batch Config Mode
+============================================================
+
+* Description: Block size matrix test on inferno pool
+* Total runs: 4
+* Continue on error: true
+• Run 1: 4K-block-test — pools=['inferno'], block_size=4K, zfs_iter=2, disk_iter=0
+• Run 2: 32K-block-test — pools=['inferno'], block_size=32K, zfs_iter=2, disk_iter=0
+• Run 3: 128K-block-test — pools=['inferno'], block_size=128K, zfs_iter=2, disk_iter=0
+• Run 4: 1M-block-test — pools=['inferno'], block_size=1M, zfs_iter=2, disk_iter=0
+
+✓ Batch configuration validated — starting runs.
+
+############################################################
+#              Run 1 of 4: 4K-block-test                   #
+############################################################
+
+* Pools: inferno
+* ZFS iterations: 2, Pool block size: 4k
+...
+✓ Run 1 (4K-block-test) completed successfully.
+
+############################################################
+#              Run 2 of 4: 32K-block-test                  #
+############################################################
+
+...
+
+############################################################
+#                Batch Results Comparison                   #
+############################################################
+
+============================================================
+ Pool: inferno
+============================================================
+
+Run                            Status     Write MB/s   Read MB/s    DWPD     Duration
+----------------------------------------------------------------------------------------------
+4K-block-test                  success    245.3        1234.5       5.67     1843s
+32K-block-test                 success    1023.7       3456.2       12.34    923s
+128K-block-test                success    2345.1       5678.3       18.91    612s
+1M-block-test                  success    3456.8       6789.4       25.32    487s
+
+############################################################
+#                     Batch Complete                        #
+############################################################
+
+✓ Total batch time: 64.42 minutes
+* Successful: 4 / 4
+```
 
 ## Contributing
 

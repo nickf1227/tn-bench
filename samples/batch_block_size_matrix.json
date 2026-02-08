@@ -1,0 +1,38 @@
+{
+  "description": "Block size matrix test — compare ZFS performance across block sizes",
+  "continue_on_error": true,
+  "global": {
+    "pools": ["inferno"],
+    "cleanup": true,
+    "verify_cleanup": true,
+    "retry_cleanup": 3,
+    "disk_iterations": 0
+  },
+  "runs": [
+    {
+      "name": "4K-block-test",
+      "zfs_iterations": 2,
+      "pool_block_size": "4K"
+    },
+    {
+      "name": "16K-block-test",
+      "zfs_iterations": 2,
+      "pool_block_size": "16K"
+    },
+    {
+      "name": "32K-block-test",
+      "zfs_iterations": 2,
+      "pool_block_size": "32K"
+    },
+    {
+      "name": "128K-block-test",
+      "zfs_iterations": 2,
+      "pool_block_size": "128K"
+    },
+    {
+      "name": "1M-block-test",
+      "zfs_iterations": 2,
+      "pool_block_size": "1M"
+    }
+  ]
+}

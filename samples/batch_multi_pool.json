@@ -1,0 +1,26 @@
+{
+  "description": "Multi-pool comparison — same config on different pools",
+  "continue_on_error": true,
+  "global": {
+    "cleanup": true,
+    "verify_cleanup": true,
+    "retry_cleanup": 3,
+    "zfs_iterations": 3,
+    "pool_block_size": "1M",
+    "disk_iterations": 0
+  },
+  "runs": [
+    {
+      "name": "fire-pool",
+      "pools": ["fire"]
+    },
+    {
+      "name": "ice-pool",
+      "pools": ["ice"]
+    },
+    {
+      "name": "inferno-pool",
+      "pools": ["inferno"]
+    }
+  ]
+}
