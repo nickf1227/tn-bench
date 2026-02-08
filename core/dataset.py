@@ -36,9 +36,11 @@ def create_dataset(pool_name, recordsize="1M"):
     # Escape spaces in the pool name
     escaped_pool_name = pool_name.replace(" ", "\\ ")
     dataset_name = f"{escaped_pool_name}/tn-bench"
+    # TrueNAS API requires uppercase unit suffix (K, M) not lowercase (k, m)
+    recordsize_api = recordsize.upper()
     dataset_config = {
         "name": dataset_name,
-        "recordsize": recordsize,
+        "recordsize": recordsize_api,
         "compression": "OFF",
         "sync": "DISABLED"
     }
