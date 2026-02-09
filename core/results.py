@@ -93,6 +93,24 @@ def save_results_to_json(results, output_path, start_time, end_time):
                     "samples": iostat.get("samples", [])
                 }
             
+            # Add arcstat telemetry if available
+            if "arcstat_telemetry" in pool and pool["arcstat_telemetry"]:
+                arcstat = pool["arcstat_telemetry"]
+                pool_entry["arcstat_telemetry"] = {
+                    "pool_name": arcstat.get("pool_name"),
+                    "start_time": arcstat.get("start_time"),
+                    "start_time_iso": arcstat.get("start_time_iso"),
+                    "end_time": arcstat.get("end_time"),
+                    "end_time_iso": arcstat.get("end_time_iso"),
+                    "duration_seconds": arcstat.get("duration_seconds"),
+                    "warmup_iterations": arcstat.get("warmup_iterations"),
+                    "cooldown_iterations": arcstat.get("cooldown_iterations"),
+                    "total_samples": arcstat.get("total_samples"),
+                    "sample_interval": arcstat.get("sample_interval"),
+                    "fields": arcstat.get("fields", []),
+                    "samples": arcstat.get("samples", [])
+                }
+            
             # Add DWPD info if available
             if "dwpd" in pool:
                 pool_entry["dwpd"] = round(pool["dwpd"], 2)
