@@ -51,8 +51,10 @@ tn-bench/
 - **`disk_enhanced.py`**: `EnhancedDiskBenchmark` - Multiple test modes (serial/parallel/seek_stress)
 
 ### `truenas-bench.py` - Main Coordinator
-- User interface and flow control
+- User interface and flow control (interactive, unattended, and batch modes)
 - Delegates to modules for all operations
+- Batch/matrix mode (`--config`) for sequential multi-run testing with config files
+- Robust dataset cleanup with verification, retry, and force-delete logic
 - Runs analytics and generates reports post-benchmark
 
 ## Key Components

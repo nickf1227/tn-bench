@@ -1,0 +1,42 @@
+{
+  "description": "Regression test suite — known good configurations for periodic validation",
+  "continue_on_error": false,
+  "global": {
+    "cleanup": true,
+    "verify_cleanup": true,
+    "retry_cleanup": 5,
+    "force_cleanup": true
+  },
+  "runs": [
+    {
+      "name": "baseline-1M-zfs",
+      "pools": ["all"],
+      "zfs_iterations": 2,
+      "pool_block_size": "1M",
+      "disk_iterations": 0
+    },
+    {
+      "name": "baseline-128K-zfs",
+      "pools": ["all"],
+      "zfs_iterations": 2,
+      "pool_block_size": "128K",
+      "disk_iterations": 0
+    },
+    {
+      "name": "baseline-disk-serial",
+      "pools": ["none"],
+      "zfs_iterations": 0,
+      "disk_iterations": 2,
+      "disk_modes": ["serial"],
+      "disk_block_size": "1M"
+    },
+    {
+      "name": "baseline-disk-parallel",
+      "pools": ["none"],
+      "zfs_iterations": 0,
+      "disk_iterations": 1,
+      "disk_modes": ["parallel"],
+      "disk_block_size": "1M"
+    }
+  ]
+}

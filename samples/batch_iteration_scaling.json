@@ -1,0 +1,30 @@
+{
+  "description": "Iteration scaling test — measure variance reduction with more iterations",
+  "continue_on_error": true,
+  "global": {
+    "pools": ["all"],
+    "cleanup": true,
+    "verify_cleanup": true,
+    "retry_cleanup": 3,
+    "pool_block_size": "1M",
+    "disk_iterations": 0
+  },
+  "runs": [
+    {
+      "name": "1-iteration",
+      "zfs_iterations": 1
+    },
+    {
+      "name": "2-iterations",
+      "zfs_iterations": 2
+    },
+    {
+      "name": "5-iterations",
+      "zfs_iterations": 5
+    },
+    {
+      "name": "10-iterations",
+      "zfs_iterations": 10
+    }
+  ]
+}
