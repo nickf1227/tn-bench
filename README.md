@@ -251,6 +251,18 @@ Generates:
 - `results_analytics.json` — Scaling analysis and disk comparison
 - `results_report.md` — Markdown report for sharing
 
+
+## Threads limit
+
+`python3 truenas-bench.py [--limit <maxThreads>]`
+
+### Example
+```bash
+python3 truenas-bench.py --limit 16
+```
+
+Run benchmark on 16 threads maximum
+
 ## Analytics (v2.1+)
 
 tn-bench automatically analyzes benchmark results to identify scaling patterns and performance characteristics:
